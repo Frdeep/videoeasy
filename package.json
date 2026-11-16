@@ -1,0 +1,49 @@
+{
+  "name": "videoeasy",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:db": "vitest run tests/database.test.ts",
+    "reconcile": "node --env-file=.env.local --conditions=react-server --import tsx scripts/reconcile.ts",
+    "check:stripe": "node --env-file=.env.local --conditions=react-server --import tsx scripts/check-stripe.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Frdeep/videoeasy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Frdeep/videoeasy/issues"
+  },
+  "homepage": "https://github.com/Frdeep/videoeasy#readme",
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.0",
+    "next": "^16.4.6",
+    "pg": "^8.23.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
+    "stripe": "23.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "prettier": "^3.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "private": true
+}
