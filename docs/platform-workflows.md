@@ -53,3 +53,11 @@ Photographies téléchargées depuis Unsplash, utilisées comme illustrations d�
 - stars.jpg : https://images.unsplash.com/photo-1469474968028-56623f02e42e
 
 Les noms de fichiers sont des identifiants internes ; ils ne définissent pas le résultat attendu d’un modèle.
+
+## Correctif du parcours d’inscription
+
+Les journaux Supabase ont confirmé des inscriptions réussies suivies de connexions refusées avec `email_not_confirmed`. Le parcours affiche désormais une page dédiée de confirmation, les étapes à suivre dans la boîte mail et un message spécifique pour une adresse non confirmée ou une limitation d’envoi. L’écran de confirmation ne réaffiche plus le formulaire d’inscription. Un état de soumission désactive le bouton pendant la demande.
+
+Les pages compte et administration redirigent elles-mêmes les visiteurs non connectés, car leur rendu peut démarrer indépendamment du layout. La connexion accepte aussi les mots de passe existants de moins de 12 caractères ; l’inscription conserve le minimum de 12.
+
+Validation du correctif : 72 tests passent, compilation réussie, smoke Chromium mobile des messages et de la redirection du compte. Aucun e-mail supplémentaire n’a été envoyé par les tests ; les résultats du fournisseur sont simulés dans la suite automatisée.

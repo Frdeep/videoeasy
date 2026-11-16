@@ -1,11 +1,11 @@
 import { ProfileEditor } from "@/components/profile-editor";
 import Link from "next/link";
-import { requireUser } from "@/lib/auth";
+import { requirePageUser } from "@/lib/page-user";
 import { db } from "@/lib/db";
 import { plans, type Plan } from "@/lib/plans";
 import { AccountActions } from "@/components/account-actions";
 export default async function Account() {
-  const user = await requireUser();
+  const user = await requirePageUser();
   let subscription;
   let available = 0;
   let unavailable = false;

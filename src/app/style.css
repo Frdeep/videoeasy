@@ -1717,3 +1717,24 @@ select {
   object-fit: cover;
   border-radius: 5px;
 }
+.auth-feedback {
+  border: 1px solid #d7d7d7;
+  background: #f7f7f7;
+  padding: 18px;
+  border-radius: 6px;
+  margin: 20px 0;
+}
+.auth-feedback h2 {
+  font-size: 19px;
+  margin-top: 0;
+}
+.auth-feedback li {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #333;
+}
+.auth-feedback .button {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+}

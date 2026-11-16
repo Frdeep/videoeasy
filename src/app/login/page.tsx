@@ -1,8 +1,6 @@
-import { redirect } from "next/navigation";
-import { z } from "zod";
 import Link from "next/link";
-import { supabase } from "@/lib/auth";
-import { appUrl } from "@/lib/config";
+import { authenticate } from "./actions";
+import { AuthSubmit } from "@/components/auth-submit";
 export default async function Login({
   searchParams,
 }: {
@@ -15,117 +13,124 @@ export default async function Login({
       : params.mode === "magic"
         ? "magic"
         : "password";
-  async function authenticate(form: FormData) {
-    "use server";
-    const email = z
-      .email()
-      .max(254)
-      .safeParse(String(form.get("email") ?? ""));
-    const action = String(form.get("mode"));
-    const password = String(form.get("password") ?? "");
-    if (
-      !email.success ||
-      !["signup", "magic", "password"].includes(action) ||
-      (action !== "magic" &&
-        ((action === "signup" ? password.length < 12 : password.length < 1) ||
-          password.length > 128))
-    )
-      redirect("/login?error=1");
-    let error = false;
-    let session = false;
-    try {
-      const client = await supabase();
-      if (action === "signup") {
-        const result = await client.auth.signUp({
-          email: email.data,
-          password,
-          options: { emailRedirectTo: `${appUrl()}/auth/callback` },
-        });
-        error = !!result.error;
-        session = !!result.data.session;
-      } else if (action === "password") {
-        const result = await client.auth.signInWithPassword({
-          email: email.data,
-          password,
-        });
-        error = !!result.error;
-        session = !!result.data.session;
-      } else {
-        const result = await client.auth.signInWithOtp({
-          email: email.data,
-          options: { emailRedirectTo: `${appUrl()}/auth/callback` },
-        });
-        error = !!result.error;
-      }
-    } catch {
-      error = true;
-    }
-    redirect(error ? "/login?error=1" : session ? "/account" : "/login?sent=1");
-  }
+  const sent = !!params.sent;
   return (
     <div className="auth-container">
-      <h1>{mode === "signup" ? "Créer mon compte" : "Connexion"}</h1>
-      <p>Retrouvez vos créations dans votre espace privé.</p>
-      {params.sent && (
-        <p role="status">
-          Si votre demande est éligible, vous recevrez un e-mail de
-          confirmation. Vérifiez vos indésirables.
-        </p>
-      )}
-      {params.error && (
-        <p role="alert">
-          Connexion indisponible ou informations invalides. Vérifiez vos
-          identifiants et réessayez.
-        </p>
-      )}
-      <form action={authenticate}>
-        <input name="mode" type="hidden" value={mode} />
-        <label>
-          E-mail
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            maxLength={254}
-          />
-        </label>
-        {mode !== "magic" && (
-          <label>
-            Mot de passe (12 caractères minimum)
-            <input
-              name="password"
-              type="password"
-              autoComplete={
-                mode === "signup" ? "new-password" : "current-password"
-              }
-              minLength={12}
-              maxLength={128}
-              required
-            />
-          </label>
-        )}
-        <button>
-          {mode === "signup"
+      <h1>
+        {sent
+          ? "Vérifie ta boîte mail"
+          : mode === "signup"
             ? "Créer mon compte"
-            : mode === "magic"
-              ? "Recevoir mon lien"
-              : "Se connecter"}
-        </button>
-      </form>
-      <p>
-        <Link href={mode === "signup" ? "/login" : "/login?mode=signup"}>
-          {mode === "signup" ? "J’ai déjà un compte" : "Créer un compte"}
-        </Link>
-      </p>
-      <Link
-        className="text-link"
-        href={mode === "magic" ? "/login" : "/login?mode=magic"}
-      >
-        {mode === "magic"
-          ? "Connexion par mot de passe"
-          : "Utiliser un lien de connexion par e-mail"}
-      </Link>
+            : "Connexion"}
+      </h1>
+      {sent ? (
+        <div className="auth-feedback" role="status">
+          <h2>Encore une étape avant de te connecter</h2>
+          <p>
+            {params.sent === "magic"
+              ? "Si cette adresse est éligible, un lien de connexion lui a été envoyé."
+              : "Si cette inscription est éligible, un e-mail de confirmation a été envoyé à l’adresse indiquée."}
+          </p>
+          <ol>
+            <li>Ouvre ta boîte mail.</li>
+            <li>
+              Cherche le message de Supabase / VideoEasy, aussi dans les
+              indésirables.
+            </li>
+            <li>Clique sur le lien le plus récent.</li>
+          </ol>
+          <p>
+            Si tu reçois une confirmation d’inscription, confirme d’abord ton
+            adresse puis reviens te connecter. Ne crée pas un deuxième compte.
+          </p>
+          <Link className="button primary" href="/login">
+            Mon adresse est confirmée : me connecter
+          </Link>
+        </div>
+      ) : (
+        <>
+          <p>Retrouve tes créations dans ton espace privé.</p>
+          {params.error && (
+            <div className="auth-feedback" role="alert">
+              {params.error === "confirmation" ? (
+                <>
+                  <strong>
+                    Ton adresse e-mail n’est pas encore confirmée.
+                  </strong>
+                  <p>
+                    Ouvre le dernier message de confirmation envoyé par Supabase
+                    / VideoEasy, puis clique sur son lien avant de te connecter.
+                    Vérifie aussi tes indésirables.
+                  </p>
+                </>
+              ) : params.error === "wait" ? (
+                <p>
+                  Une demande vient déjà d’être envoyée. Attends au moins une
+                  minute avant de réessayer et vérifie ta boîte mail.
+                </p>
+              ) : (
+                <p>
+                  La connexion ou l’inscription n’a pas abouti. Vérifie les
+                  informations saisies. Si tu viens de créer ton compte,
+                  confirme d’abord ton adresse e-mail.
+                </p>
+              )}
+            </div>
+          )}
+          <form action={authenticate}>
+            <input name="mode" type="hidden" value={mode} />
+            <label>
+              E-mail
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                maxLength={254}
+              />
+            </label>
+            {mode !== "magic" && (
+              <label>
+                {mode === "signup"
+                  ? "Mot de passe (12 caractères minimum)"
+                  : "Mot de passe"}
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete={
+                    mode === "signup" ? "new-password" : "current-password"
+                  }
+                  minLength={mode === "signup" ? 12 : 1}
+                  maxLength={128}
+                  required
+                />
+              </label>
+            )}
+            <AuthSubmit
+              label={
+                mode === "signup"
+                  ? "Créer mon compte"
+                  : mode === "magic"
+                    ? "Recevoir mon lien"
+                    : "Se connecter"
+              }
+            />
+          </form>
+          <p>
+            <Link href={mode === "signup" ? "/login" : "/login?mode=signup"}>
+              {mode === "signup" ? "J’ai déjà un compte" : "Créer un compte"}
+            </Link>
+          </p>
+          <Link
+            className="text-link"
+            href={mode === "magic" ? "/login" : "/login?mode=magic"}
+          >
+            {mode === "magic"
+              ? "Connexion par mot de passe"
+              : "Utiliser un lien de connexion par e-mail"}
+          </Link>
+        </>
+      )}
     </div>
   );
 }

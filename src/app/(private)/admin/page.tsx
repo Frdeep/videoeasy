@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { requirePageUser } from "@/lib/page-user";
 import { isAdmin } from "@/lib/platform";
 import { AdminPanel } from "@/components/admin-panel";
 export default async function Admin() {
-  const u = await requireUser();
+  const u = await requirePageUser();
   if (!isAdmin(u.id)) notFound();
   return (
     <section className="section private-page">
