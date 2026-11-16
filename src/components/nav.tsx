@@ -1,35 +1,51 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState } from "react";
 export function Nav() {
-  const path = usePathname();
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <Link href="/" className="brand">
-        <span className="brand-icon">
-          v<span>e</span>
-        </span>
-        videoeasy<span className="beta">BÊTA</span>
+      <button
+        className="menu-button"
+        aria-label="Afficher le menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        ☰
+      </button>
+      <Link className="brand" href="/">
+        videoeasy<span className="brand-play">▶</span>
       </Link>
-      <nav aria-label="Navigation principale">
-        {[
-          ["/explore", "Explorer"],
-          ["/studio", "Studio"],
-          ["/gallery", "Mes créations"],
-          ["/pricing", "Abonnements"],
-        ].map(([href, label]) => (
-          <Link
-            key={href}
-            href={href}
-            aria-current={path === href ? "page" : undefined}
-          >
-            {label}
-          </Link>
-        ))}
-      </nav>
+      <form className="global-search" action="/">
+        <input
+          type="search"
+          name="q"
+          aria-label="Rechercher une inspiration"
+          placeholder="Rechercher une inspiration"
+        />
+        <button aria-label="Rechercher">⌕</button>
+      </form>
+      <Link className="create-top" href="/studio">
+        ＋ Créer
+      </Link>
       <Link className="nav-account" href="/account">
-        Mon espace <span aria-hidden="true">→</span>
+        Mon compte
       </Link>
+      {open && (
+        <nav className="menu-popover" aria-label="Menu">
+          {[
+            ["/", "Accueil"],
+            ["/studio", "Studio"],
+            ["/gallery", "Mes créations"],
+            ["/pricing", "Abonnements"],
+            ["/account", "Mon compte"],
+          ].map(([href, label]) => (
+            <Link key={href} href={href} onClick={() => setOpen(false)}>
+              {label}
+            </Link>
+          ))}
+        </nav>
+      )}
     </>
   );
 }

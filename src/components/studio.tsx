@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Artwork } from "./artwork";
+
 const inspirations = {
   orb: "Une sphère de verre irisée flotte dans un espace sombre. Lumière violette, reflets subtils, mouvement lent de caméra, ambiance cinématographique.",
   dune: "Un paysage de dunes au coucher du soleil. Une brume légère traverse les reliefs, palette ambrée, travelling lent et contemplatif.",
@@ -194,9 +194,14 @@ export function Studio({ preview = false }: { preview?: boolean }) {
                 className="preview-art"
                 style={{ aspectRatio: ratio.replace(":", " / ") }}
               >
-                <Artwork
-                  variant={kind === "video" ? "orb" : "bloom"}
-                  label="Illustration abstraite du studio, pas un résultat généré"
+                <img
+                  className="studio-inspiration"
+                  src={
+                    kind === "video"
+                      ? "/editorial/lake.jpg"
+                      : "/editorial/night.jpg"
+                  }
+                  alt="Photographie d’inspiration, pas un résultat de génération"
                 />
                 <span className="preview-badge">ILLUSTRATION · {ratio}</span>
               </div>

@@ -1,3 +1,4 @@
+import { ProfileEditor } from "@/components/profile-editor";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -85,6 +86,7 @@ export default async function Account() {
           Voir les formules
         </Link>
       </div>
+      <ProfileEditor />
       <AccountActions />
     </section>
   );
