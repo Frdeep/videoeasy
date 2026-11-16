@@ -1,6 +1,6 @@
 export default function Cancel() {
   return (
-    <>
+    <div className="return-page">
       <h1>Paiement interrompu</h1>
       <p>
         Aucun crédit n’est attribué par cette page. Vous pouvez reprendre votre
@@ -8,6 +8,6 @@ export default function Cancel() {
         minutes.
       </p>
       <a href="/">Retour aux abonnements</a>
-    </>
+    </div>
   );
 }

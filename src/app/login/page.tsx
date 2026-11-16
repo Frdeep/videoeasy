@@ -26,7 +26,7 @@ export default async function Login({
     redirect(failed ? "/login?error=1" : "/login?sent=1");
   }
   return (
-    <>
+    <div className="auth-container">
       <h1>Connexion à VideoEasy</h1>
       <p>Recevez un lien de connexion par e-mail.</p>
       {params.sent && (
@@ -46,6 +46,6 @@ export default async function Login({
         </label>
         <button>Recevoir mon lien</button>
       </form>
-    </>
+    </div>
   );
 }

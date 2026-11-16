@@ -1,5 +1,7 @@
 # VideoEasy — intégration Stripe en environnement de test
 
+Interface VideoEasy : accueil, aperçu interactif du studio, brouillons locaux, espace client authentifié et galerie en préparation. Voir [la livraison du studio](docs/studio-progress.md) et [l’étude HeliosGen](docs/heliosgen-review.md).
+
 Base Next.js / TypeScript, authentification Supabase, Checkout hébergé, Customer Portal et allocations de crédits dans PostgreSQL Supabase. Aucune génération IA, aucun média public, aucun paiement réel.
 
 | Formule  | Mensuel EUR | Crédits / période | Générations simultanées |

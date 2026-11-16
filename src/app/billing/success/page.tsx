@@ -37,10 +37,10 @@ export default function Success() {
     };
   }, []);
   return (
-    <>
+    <div className="return-page">
       <h1>Votre abonnement</h1>
       <p role="status">{message}</p>
       <a href="/">Retour aux abonnements</a>
-    </>
+    </div>
   );
 }
