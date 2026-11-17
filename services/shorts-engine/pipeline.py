@@ -97,9 +97,9 @@ def transcribe(path: Path) -> tuple[list[Segment], str]:
     segs, info = _model.transcribe(str(path), word_timestamps=True, vad_filter=True)
     result = []
     for s in segs:
-        words = [Word(w.word.strip(), w.start, w.end) for w in (s.words or []) if w.word.strip()]
+        words = [Word(w.word.strip(), float(w.start), float(w.end)) for w in (s.words or []) if w.word.strip()]
         if words:
-            result.append(Segment(s.start, s.end, s.text.strip(), words))
+            result.append(Segment(float(s.start), float(s.end), s.text.strip(), words))
     return result, info.language
 
 
@@ -120,7 +120,7 @@ def pick_moments(segments: list[Segment], count: int, target: float) -> list[Mom
                 density = nwords / dur  # words per second: lively talking scores higher
                 hook = 1.0 if HOOKS.search(first.text) else 0.0
                 ends_clean = 0.5 if seg.text.rstrip().endswith((".", "!", "?")) else 0.0
-                score = density + 0.6 * min(punct, 3) + hook + ends_clean
+                score = float(density) + 0.6 * min(punct, 3) + hook + ends_clean
                 candidates.append(Moment(first.start, seg.end, score, " ".join(text)))
     candidates.sort(key=lambda m: m.score, reverse=True)
     chosen: list[Moment] = []
