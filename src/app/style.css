@@ -3395,3 +3395,26 @@ button.drop:active {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
+.viewer-edit {
+  position: absolute;
+  z-index: 2;
+  right: 14px;
+  bottom: calc(130px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 16px;
+  border-radius: 999px;
+  background: #000;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.35);
+}
+.viewer-edit svg,
+.step-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

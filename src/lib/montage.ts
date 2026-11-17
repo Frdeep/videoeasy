@@ -93,7 +93,7 @@ export async function createMontage(userId: string, input: z.infer<typeof montag
       return false; // idempotent replay
     }
     const { rows: [stats] } = await c.query<{ active: number; today: number; free: number }>(
-      `select count(*) filter (where status in ('processing','importing'))::int as active,
+      `select count(*) filter (where status in ('processing','importing') and engine_state is distinct from 'editor_upload')::int as active,
               count(*) filter (where created_at > now() - interval '1 day')::int as today,
               count(*) filter (where free and status <> 'failed')::int as free
        from platform.montages where user_id=$1`,
@@ -146,9 +146,14 @@ async function fail(id: string, code: string) {
 }
 
 export async function advanceMontages(userId: string) {
+  // Editor uploads never finished (tab closed) are dropped after 2 h.
+  await db().query(
+    "update platform.montages set status='failed', error_code='upload_abandoned', finished_at=now() where user_id=$1 and status='processing' and engine_state='editor_upload' and created_at < now() - interval '2 hours'",
+    [userId],
+  );
   const { rows } = await db().query<Row>(
     `select id,user_id,status,object_key,created_at from platform.montages where user_id=$1 and deleted_at is null and (
-       (status='processing' and checked_at < now() - make_interval(secs => $2))
+       (status='processing' and engine_state is distinct from 'editor_upload' and checked_at < now() - make_interval(secs => $2))
        or (status='importing' and import_started_at < now() - make_interval(mins => $3)))`,
     [userId, CHECK_EVERY_SECONDS, IMPORT_LEASE_MINUTES],
   );

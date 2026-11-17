@@ -2,6 +2,7 @@ import "server-only";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -89,4 +90,14 @@ export async function hfSignedPut(key: string, contentType: string) {
     ),
     key: HF_PREFIX + key,
   };
+}
+
+/** Size of an uploaded object, or null when it does not exist. */
+export async function hfSize(prefixedKey: string) {
+  try {
+    const r = await s3().send(new HeadObjectCommand({ Bucket: bucket(), Key: strip(prefixedKey) }));
+    return Number(r.ContentLength ?? 0);
+  } catch {
+    return null;
+  }
 }

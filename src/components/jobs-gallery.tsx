@@ -150,6 +150,9 @@ export function JobsGallery() {
                       <a className="text-link" href={`/montage?from=montage:${m.id}`}>
                         {t("Monter")}
                       </a>
+                      <a className="text-link" href={`/editor/open?ref=montage:${m.id}`}>
+                        {t("Modifier")}
+                      </a>
                     </div>
                   </>
                 )}
@@ -217,6 +220,9 @@ export function JobsGallery() {
                       </button>
                       <a className="text-link" href={`/montage?from=job:${j.id}`}>
                         {t("Monter")}
+                      </a>
+                      <a className="text-link" href={`/editor/open?ref=job:${j.id}`}>
+                        {t("Modifier")}
                       </a>
                     </>
                   )}

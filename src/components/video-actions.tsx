@@ -179,6 +179,14 @@ export function NextSteps({ video, onTransfer }: { video: VideoRef; onTransfer: 
           </svg>
           {t("Monter")}
         </Link>
+        {video.kind !== "short" && (
+          <a className="step-btn" href={`/editor/open?ref=${video.kind}:${video.id}`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+              <path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />
+            </svg>
+            {t("Modifier")}
+          </a>
+        )}
         <button className="step-btn" onClick={onTransfer}>
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
             <path d="M4 12h13M12 6l6 6-6 6" />
