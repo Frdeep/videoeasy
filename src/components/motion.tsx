@@ -30,11 +30,14 @@ export function Segmented<T extends string>({
         `[data-value="${CSS.escape(value)}"]`,
       );
       if (el) setPill({ x: el.offsetLeft, w: el.offsetWidth });
-      el?.scrollIntoView({
-        block: "nearest",
-        inline: "center",
-        behavior: "smooth",
-      });
+      // Horizontal only: scrollIntoView would also scroll the page vertically
+      // on load (mobile pages opened half-way down).
+      const box = wrap.current;
+      if (el && box && box.scrollWidth > box.clientWidth)
+        box.scrollTo({
+          left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2,
+          behavior: "smooth",
+        });
     };
     measure();
     window.addEventListener("resize", measure);
