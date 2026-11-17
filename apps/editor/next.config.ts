@@ -1,8 +1,13 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
 	// Served by VideoEasy under /editor (Next.js multi-zones).
 	basePath: "/editor",
+	// Same repo as VideoEasy: keep Turbopack and file tracing inside this app,
+	// otherwise Next picks up VideoEasy's root files (src/proxy.ts…).
+	turbopack: { root: path.resolve(__dirname) },
+	outputFileTracingRoot: path.resolve(__dirname),
 	compiler: {
 		removeConsole: process.env.NODE_ENV === "production",
 	},
