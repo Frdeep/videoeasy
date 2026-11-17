@@ -1,6 +1,7 @@
 import { stripe } from "@/lib/stripe";
 import { env } from "@/lib/config";
 import { processEvent } from "@/lib/sync";
+import { matchesMode } from "@/lib/stripe-mode";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export async function POST(request: Request) {
@@ -11,8 +12,11 @@ export async function POST(request: Request) {
       request.headers.get("stripe-signature") ?? "",
       env("STRIPE_WEBHOOK_SECRET"),
     );
-    if (event.livemode)
-      return Response.json({ error: "Test events only" }, { status: 400 });
+    if (!matchesMode(event.livemode))
+      return Response.json(
+        { error: "Event mode does not match STRIPE_MODE" },
+        { status: 400 },
+      );
   } catch {
     return Response.json(
       { error: "Invalid webhook signature or configuration" },

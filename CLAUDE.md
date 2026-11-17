@@ -285,6 +285,7 @@ Variables prévues dans `.env.example`, à inspecter/configurer selon la phase :
 | `NEXT_PUBLIC_SUPABASE_URL`       | URL publique du bon projet                                                             |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Clé publique/publishable ou anon ; jamais une clé privilégiée                          |
 | `DATABASE_URL`                   | Connexion PostgreSQL serveur privilégiée, directe ou pooler Session                    |
+| `STRIPE_MODE`                    | `test` (défaut si absente) ou `live`, exactement ; toute autre valeur bloque Stripe    |
 | `STRIPE_SECRET_KEY`              | Clé serveur du compte et du mode effectivement ciblés                                  |
 | `STRIPE_ACCOUNT_ID`              | ID du même compte Stripe, utilisé comme garde-fou                                      |
 | `STRIPE_WEBHOOK_SECRET`          | Secret de signature de la destination exacte et du même environnement                  |
@@ -548,7 +549,7 @@ Le code contient encore des refus du live dans plusieurs endroits :
 - vérificateur `scripts/check-stripe.ts` ;
 - tests qui encadrent ces comportements.
 
-**Ne pas simplement supprimer toutes les vérifications `livemode`.** Concevoir un mode Stripe explicite et vérifier que clé, compte, tarifs, portail, factures, événements et secret de webhook correspondent tous au même environnement. Une variable telle que `STRIPE_MODE` peut être ajoutée si le design la retient ; elle n’existe pas actuellement dans le code et ne doit pas être présentée comme déjà opérationnelle.
+**Mise à jour du 17/11/2026 (branche `feat/stripe-live-mode`) :** les refus codés en dur ont été remplacés par un mode explicite `STRIPE_MODE` (`src/lib/stripe-mode.ts`). Absent → `test` (comportement historique) ; `live` doit être écrit exactement ; toute autre valeur échoue fermée. Préfixe de clé (`sk_/rk_` + mode), Customer, Price, Session, Portal, abonnements, factures, événements webhook et `check:stripe` doivent tous correspondre au mode. Tests unitaires ajoutés. **Code écrit et testé en simulation uniquement** : aucune variable n’a été ajoutée dans Vercel, aucun compte live n’a été inspecté, aucun paiement réel n’a eu lieu. Le secret de webhook live et le compte (`STRIPE_ACCOUNT_ID`) restent à configurer avec les valeurs du compte réel.
 
 Conserver l’isolation des tests automatisés et des données de test. Ne pas transformer les fixtures en appels live. Les identifiants test et live ne sont pas interchangeables.
 

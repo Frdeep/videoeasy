@@ -5,6 +5,7 @@ import { stripe, verifyAccount } from "./stripe";
 import { db, withUserLock, transaction } from "./db";
 import { planForPrice } from "./config";
 import { allocation } from "./invoice-policy";
+import { assertMode, matchesMode } from "./stripe-mode";
 
 export const handledEvents = new Set([
   "checkout.session.completed",
@@ -90,16 +91,16 @@ export async function syncCustomer(
   const customer = await stripe().customers.retrieve(customerId);
   if (
     customer.deleted ||
-    customer.livemode ||
+    !matchesMode(customer.livemode) ||
     customer.metadata.supabase_user_id !== userId
   )
-    throw new Error("Invalid test customer");
+    throw new Error("Invalid customer for this Stripe mode");
   for await (const sub of stripe().subscriptions.list({
     customer: customerId,
     status: "all",
     limit: 100,
   })) {
-    if (sub.livemode) throw new Error("Live subscription rejected");
+    assertMode(sub.livemode, "subscription");
     const item = sub.items.data[0];
     const plan =
       sub.items.data.length === 1 && !sub.items.has_more && item.quantity === 1
@@ -128,7 +129,7 @@ export async function syncCustomer(
     customer: customerId,
     limit: 100,
   })) {
-    if (invoice.livemode) throw new Error("Live invoice rejected");
+    assertMode(invoice.livemode, "invoice");
     if (!invoice.parent?.subscription_details) continue;
     const lines: Stripe.InvoiceLineItem[] = [];
     for await (const line of stripe().invoices.listLineItems(invoice.id, {
@@ -140,7 +141,7 @@ export async function syncCustomer(
   await expireGrants(c, userId);
 }
 export async function processEvent(event: Stripe.Event) {
-  if (event.livemode) throw new Error("Live event rejected");
+  assertMode(event.livemode, "event");
   if (!handledEvents.has(event.type)) return;
   const customerId = objectId(
     (event.data.object as { customer?: string | { id: string } }).customer,
