@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { failure, HttpError } from "@/lib/http";
-import { signedUrl } from "@/lib/media-store";
+import { fileResponse } from "@/lib/media-store";
 import { z } from "zod";
 export async function GET(
   _: Request,
@@ -32,8 +32,7 @@ export async function GET(
         },
       );
     if (!j.object_key) throw new HttpError(409, "Fichier non disponible.");
-    const inline = new URL(_.url).searchParams.get("view") === "1";
-    return Response.redirect(await signedUrl(j.object_key, !inline), 303);
+    return fileResponse(_, j.object_key, `videoeasy-${id.slice(0, 8)}.mp4`);
   } catch (e) {
     return failure(e);
   }

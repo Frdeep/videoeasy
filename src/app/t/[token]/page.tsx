@@ -1,5 +1,6 @@
 import { liveTransfer } from "@/lib/transfers";
 import { getT } from "@/lib/locale";
+import { DownloadLink } from "@/components/download-link";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: false }, referrer: "no-referrer" as const };
@@ -21,9 +22,9 @@ export default async function TransferPage({ params }: { params: Promise<{ token
       <h1>{t("Une vidéo pour vous.")}</h1>
       {tr.message && <blockquote className="transfer-message">{tr.message}</blockquote>}
       <video className="transfer-video" src={`/t/${token}/file?view=1`} controls playsInline preload="metadata" />
-      <a className="button primary big" href={`/t/${token}/file`}>
+      <DownloadLink className="button primary big" href={`/t/${token}/file`}>
         {t("Télécharger")}
-      </a>
+      </DownloadLink>
       <p className="fine-print">
         {t("Disponible jusqu’au {date}.", {
           date: new Date(tr.expires_at).toLocaleString(dl, { dateStyle: "long", timeStyle: "short" }),

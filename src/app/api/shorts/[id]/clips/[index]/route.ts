@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { failure, HttpError } from "@/lib/http";
-import { signedUrl } from "@/lib/media-store";
+import { fileResponse } from "@/lib/media-store";
 import { clipKey } from "@/lib/shorts";
 
 export async function GET(
@@ -16,8 +16,7 @@ export async function GET(
       throw new HttpError(400, "Identifiant invalide.");
     const key = await clipKey(user.id, id, n);
     if (!key) throw new HttpError(404, "Short introuvable.");
-    const inline = new URL(r.url).searchParams.get("view") === "1";
-    return Response.redirect(await signedUrl(key, !inline), 303);
+    return fileResponse(r, key, `videoeasy-short-${id.slice(0, 8)}-${n + 1}.mp4`);
   } catch (e) {
     return failure(e);
   }

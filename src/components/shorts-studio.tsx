@@ -5,6 +5,7 @@ import { Reveal, RiseText, Segmented } from "./motion";
 import { useSnapIndex } from "./use-mobile";
 import { useT } from "./i18n";
 import { TransferDialog } from "./video-actions";
+import { DownloadLink } from "./download-link";
 
 // Long video -> shorts. Upload goes straight from the browser to private
 // storage (signed URL); the server hands it to the engine and imports the
@@ -142,7 +143,7 @@ function ClipViewer({
         </svg>
       </button>
       {clips[current] && (
-        <a
+        <DownloadLink
           className="viewer-download"
           href={clipUrl(run.id, clips[current].index, false)}
         >
@@ -150,7 +151,7 @@ function ClipViewer({
             <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
           </svg>
           {t("Télécharger")}
-        </a>
+        </DownloadLink>
       )}
       {clips[current] && (
         <button className="viewer-transfer" onClick={() => setSending(clips[current].index)}>
@@ -219,16 +220,15 @@ function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
             >
               <video src={`${clipUrl(run.id, c.index)}#t=0.5`} muted playsInline preload="metadata" />
               <span>{Math.round(c.end - c.start)} s</span>
-              <a
+              <DownloadLink
                 className="thumb-dl"
                 href={clipUrl(run.id, c.index, false)}
-                onClick={(e) => e.stopPropagation()}
-                aria-label={t("Télécharger")}
+                label={t("Télécharger")}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
                   <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
                 </svg>
-              </a>
+              </DownloadLink>
             </div>
           ))}
         </div>

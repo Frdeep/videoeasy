@@ -270,3 +270,17 @@ export async function deleteObject(key: string) {
     signal: AbortSignal.timeout(10000),
   }).catch(() => {});
 }
+
+/** Response for a file route: `?format=url` returns a JSON signed link (the
+ * browser then saves the file itself — Hugging Face's CDN ignores
+ * Content-Disposition), `?view=1` redirects for in-page playback, otherwise a
+ * download redirect. */
+export async function fileResponse(request: Request, key: string, name: string) {
+  const q = new URL(request.url).searchParams;
+  if (q.get("format") === "url")
+    return Response.json(
+      { url: await signedUrl(key, false), name },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  return Response.redirect(await signedUrl(key, q.get("view") !== "1"), 303);
+}

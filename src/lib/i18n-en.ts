@@ -568,4 +568,5 @@ export const EN: Record<string, string> = {
   "Un montage est déjà en cours. Attendez qu’il se termine.": "An edit is already in progress. Wait for it to finish.",
   "Vos 5 montages gratuits sont utilisés. Abonnez-vous pour continuer.": "Your 5 free edits are used. Subscribe to continue.",
   "Lien expiré ou introuvable.": "Link expired or not found.",
+  "Téléchargement…": "Downloading…",
 };

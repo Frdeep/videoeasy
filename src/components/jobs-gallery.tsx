@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ScheduleButton } from "./schedule-button";
 import { useT } from "./i18n";
 import { NextSteps, TransferDialog, type VideoRef } from "./video-actions";
+import { DownloadLink } from "./download-link";
 type Job = {
   id: string;
   prompt: string;
@@ -140,9 +141,9 @@ export function JobsGallery() {
                   <>
                     <NextSteps video={{ kind: "montage", id: m.id }} onTransfer={() => setTransfer({ kind: "montage", id: m.id })} />
                     <div className="card-actions">
-                      <a className="text-link" href={`/api/montage/${m.id}/download`}>
+                      <DownloadLink className="text-link" href={`/api/montage/${m.id}/download`}>
                         {t("Télécharger")}
-                      </a>
+                      </DownloadLink>
                       <button className="text-link" onClick={() => setTransfer({ kind: "montage", id: m.id })}>
                         {t("Transférer")}
                       </button>
@@ -206,9 +207,9 @@ export function JobsGallery() {
               )}
               {j.status === "succeeded" && (
                 <div className="card-actions">
-                  <a className="text-link" href={`/api/platform/jobs/${j.id}/download`}>
+                  <DownloadLink className="text-link" href={`/api/platform/jobs/${j.id}/download`}>
                     {t("Télécharger")}
-                  </a>
+                  </DownloadLink>
                   {!j.mock_result && j.content_type?.startsWith("video/") && (
                     <>
                       <button className="text-link" onClick={() => setTransfer({ kind: "job", id: j.id })}>
