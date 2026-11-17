@@ -7,6 +7,7 @@ import { appUrl, env, priceId } from "./config";
 import { plans, type Plan } from "./plans";
 import { HttpError } from "./http";
 import { syncCustomer } from "./sync";
+import { assertMode, matchesMode } from "./stripe-mode";
 
 async function customerForUser(c: PoolClient, user: User) {
   await c.query(
@@ -22,7 +23,7 @@ async function customerForUser(c: PoolClient, user: User) {
     const customer = await stripe().customers.retrieve(row.customer_id);
     if (
       customer.deleted ||
-      customer.livemode ||
+      !matchesMode(customer.livemode) ||
       customer.metadata.supabase_user_id !== user.id
     )
       throw new Error("Customer ownership mismatch");
@@ -38,7 +39,7 @@ async function customerForUser(c: PoolClient, user: User) {
     },
     { idempotencyKey: `customer-${row.creation_key}` },
   );
-  if (customer.livemode) throw new Error("Live customer rejected");
+  assertMode(customer.livemode, "customer");
   await c.query(
     "update billing.customers set customer_id=$2 where user_id=$1",
     [user.id, customer.id],
@@ -114,7 +115,7 @@ export async function createCheckout(user: User, plan: Plan) {
     if (!attempt) {
       const price = await stripe().prices.retrieve(priceId(plan));
       if (
-        price.livemode ||
+        !matchesMode(price.livemode) ||
         !price.active ||
         price.currency !== "eur" ||
         price.unit_amount !== plans[plan].cents ||
@@ -168,8 +169,8 @@ export async function createCheckout(user: User, plan: Plan) {
       },
       { idempotencyKey: `checkout-${attempt.id}` },
     );
-    if (session.livemode || !session.url)
-      throw new Error("Invalid test session");
+    if (!matchesMode(session.livemode) || !session.url)
+      throw new Error("Invalid checkout session");
     await c.query(
       "update billing.checkout_attempts set session_id=$2 where id=$1",
       [attempt.id, session.id],
@@ -191,7 +192,7 @@ export async function createPortal(user: User) {
     const customer = await stripe().customers.retrieve(row.customer_id);
     if (
       customer.deleted ||
-      customer.livemode ||
+      !matchesMode(customer.livemode) ||
       customer.metadata.supabase_user_id !== user.id
     )
       throw new Error("Customer ownership mismatch");
@@ -200,7 +201,7 @@ export async function createPortal(user: User) {
     );
     const features = configuration.features;
     if (
-      configuration.livemode ||
+      !matchesMode(configuration.livemode) ||
       !configuration.active ||
       !features.invoice_history.enabled ||
       !features.payment_method_update.enabled ||

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { invoice } from "./fixtures";
 import { allocation } from "../src/lib/invoice-policy";
 const resolve = (id: string) =>
@@ -52,5 +52,29 @@ describe("monthly allocation eligibility", () => {
       mutate(i);
       expect(allocation(i, i.lines.data, resolve)).toBeUndefined();
     }
+  });
+});
+describe("allocation follows STRIPE_MODE", () => {
+  afterEach(() => {
+    delete process.env.STRIPE_MODE;
+  });
+  it("live mode allocates a live invoice and rejects a test invoice", () => {
+    process.env.STRIPE_MODE = "live";
+    const live = invoice();
+    live.livemode = true;
+    expect(allocation(live, live.lines.data, resolve)?.credits).toBe(1000);
+    const test = invoice();
+    expect(allocation(test, test.lines.data, resolve)).toBeUndefined();
+  });
+  it("explicit test mode keeps rejecting live invoices", () => {
+    process.env.STRIPE_MODE = "test";
+    const live = invoice();
+    live.livemode = true;
+    expect(allocation(live, live.lines.data, resolve)).toBeUndefined();
+  });
+  it("an invalid STRIPE_MODE fails closed", () => {
+    process.env.STRIPE_MODE = "production";
+    const i = invoice();
+    expect(() => allocation(i, i.lines.data, resolve)).toThrow("STRIPE_MODE");
   });
 });

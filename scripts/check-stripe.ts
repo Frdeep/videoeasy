@@ -2,12 +2,15 @@
 import { verifyAccount, stripe } from "../src/lib/stripe";
 import { env, priceId } from "../src/lib/config";
 import { plans, type Plan } from "../src/lib/plans";
+import { matchesMode, stripeMode } from "../src/lib/stripe-mode";
 try {
+  const mode = stripeMode();
+  console.log(`STRIPE_MODE=${mode}`);
   await verifyAccount();
   for (const plan of Object.keys(plans) as Plan[]) {
     const price = await stripe().prices.retrieve(priceId(plan));
     if (
-      price.livemode ||
+      !matchesMode(price.livemode) ||
       !price.active ||
       price.currency !== "eur" ||
       price.unit_amount !== plans[plan].cents ||
@@ -16,13 +19,13 @@ try {
       price.recurring.usage_type !== "licensed"
     )
       throw new Error("Invalid price");
-    console.log(`${plan}: test price valid`);
+    console.log(`${plan}: ${mode} price valid`);
   }
   const config = await stripe().billingPortal.configurations.retrieve(
     env("STRIPE_PORTAL_CONFIGURATION_ID"),
   );
   if (
-    config.livemode ||
+    !matchesMode(config.livemode) ||
     !config.active ||
     config.features.subscription_update.enabled ||
     !config.features.subscription_cancel.enabled ||
@@ -32,11 +35,11 @@ try {
   )
     throw new Error("Invalid portal");
   console.log(
-    "Test account, prices and portal verified. Webhook delivery and payments still require end-to-end tests.",
+    `${mode} account, prices and portal verified. Webhook delivery and payments still require end-to-end tests.`,
   );
 } catch {
   console.error(
-    "Stripe configuration check failed. Check test environment, account, prices and portal without sharing secrets.",
+    "Stripe configuration check failed. Check STRIPE_MODE, key, account, prices and portal of the same environment without sharing secrets.",
   );
   process.exitCode = 1;
 }

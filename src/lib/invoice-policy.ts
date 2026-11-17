@@ -1,12 +1,13 @@
 import type Stripe from "stripe";
 import { plans, type Plan } from "./plans";
+import { matchesMode } from "./stripe-mode";
 export function allocation(
   invoice: Stripe.Invoice,
   lines: Stripe.InvoiceLineItem[],
   resolvePlan: (id: string) => Plan | undefined,
 ) {
   if (
-    invoice.livemode ||
+    !matchesMode(invoice.livemode) ||
     invoice.status !== "paid" ||
     invoice.amount_paid <= 0 ||
     invoice.currency !== "eur"
