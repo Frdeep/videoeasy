@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { failure, HttpError } from "@/lib/http";
-import { downloadUrl } from "@/lib/storage";
+import { signedUrl } from "@/lib/media-store";
 import { z } from "zod";
 export async function GET(
   _: Request,
@@ -15,7 +15,7 @@ export async function GET(
     const {
       rows: [j],
     } = await db().query(
-      "select object_key,mock_result from platform.jobs where id=$1 and user_id=$2 and status='succeeded' and deleted_at is null",
+      "select object_key,mock_result,provider from platform.jobs where id=$1 and user_id=$2 and status='succeeded' and deleted_at is null",
       [id, u.id],
     );
     if (!j) throw new HttpError(404, "Création introuvable.");
@@ -32,7 +32,8 @@ export async function GET(
         },
       );
     if (!j.object_key) throw new HttpError(409, "Fichier non disponible.");
-    return Response.redirect(await downloadUrl(j.object_key), 303);
+    const inline = new URL(_.url).searchParams.get("view") === "1";
+    return Response.redirect(await signedUrl(j.object_key, !inline), 303);
   } catch (e) {
     return failure(e);
   }
