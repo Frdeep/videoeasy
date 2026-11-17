@@ -6,6 +6,7 @@ import { db } from "./db";
 import { HttpError } from "./http";
 import { ownedVideoKey } from "./montage";
 import { clipKey } from "./shorts";
+import { toLitterbox } from "./litterbox";
 
 // File transfer: the owner creates an unguessable, expiring link to one of
 // their finished videos, to send to anyone (no account needed to download).
@@ -17,7 +18,7 @@ export const transferInput = z
     kind: z.enum(["job", "montage", "short"]),
     id: z.uuid(),
     index: z.number().int().min(0).max(9).optional(),
-    days: z.union([z.literal(1), z.literal(7), z.literal(30)]),
+    days: z.union([z.literal(1), z.literal(3), z.literal(30)]),
     message: z.string().trim().max(280).optional(),
   })
   .strict();
@@ -35,10 +36,12 @@ export async function createTransfer(userId: string, input: z.infer<typeof trans
   if (n >= DAILY) throw new HttpError(429, "Limite quotidienne atteinte. Revenez demain.");
   const token = randomBytes(24).toString("base64url");
   const name = `videoeasy-${input.id.slice(0, 8)}${input.kind === "short" ? `-${(input.index ?? 0) + 1}` : ""}.mp4`;
+  // Short transfers (≤ 3 days) are delivered through Litterbox in the background.
+  const external = input.days <= 3 ? await toLitterbox(key, name, input.days === 1 ? 24 : 72) : null;
   const { rows: [row] } = await db().query<{ expires_at: string }>(
-    `insert into platform.transfers(token,user_id,object_key,file_name,message,expires_at)
-     values($1,$2,$3,$4,$5, now() + make_interval(days => $6)) returning expires_at`,
-    [token, userId, key, name, input.message || null, input.days],
+    `insert into platform.transfers(token,user_id,object_key,file_name,message,expires_at,external_url)
+     values($1,$2,$3,$4,$5, now() + make_interval(days => $6), $7) returning expires_at`,
+    [token, userId, key, name, input.message || null, input.days, external],
   );
   return { url: `${appUrl()}/t/${token}`, expiresAt: row.expires_at };
 }
@@ -48,11 +51,12 @@ export async function liveTransfer(token: string) {
   if (!/^[A-Za-z0-9_-]{32,64}$/.test(token)) return null;
   const { rows } = await db().query<{
     object_key: string;
+    external_url: string | null;
     file_name: string;
     message: string | null;
     expires_at: string;
   }>(
-    "select object_key,file_name,message,expires_at from platform.transfers where token=$1 and revoked_at is null and expires_at > now()",
+    "select object_key,external_url,file_name,message,expires_at from platform.transfers where token=$1 and revoked_at is null and expires_at > now()",
     [token],
   );
   return rows[0] ?? null;

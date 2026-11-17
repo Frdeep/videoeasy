@@ -6,10 +6,10 @@ import { Segmented } from "./motion";
 
 export type VideoRef = { kind: "job" | "montage" | "short"; id: string; index?: number };
 
-const durations = ["24 h", "7 jours", "30 jours"] as const;
-const DAYS: Record<(typeof durations)[number], 1 | 7 | 30> = {
+const durations = ["24 h", "3 jours", "30 jours"] as const;
+const DAYS: Record<(typeof durations)[number], 1 | 3 | 30> = {
   "24 h": 1,
-  "7 jours": 7,
+  "3 jours": 3,
   "30 jours": 30,
 };
 
@@ -17,7 +17,7 @@ const DAYS: Record<(typeof durations)[number], 1 | 7 | 30> = {
  * user copy or share it (WhatsApp, e-mail, native share sheet). */
 export function TransferDialog({ video, onClose }: { video: VideoRef; onClose: () => void }) {
   const { t, dl } = useT();
-  const [duration, setDuration] = useState<(typeof durations)[number]>("7 jours");
+  const [duration, setDuration] = useState<(typeof durations)[number]>("3 jours");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

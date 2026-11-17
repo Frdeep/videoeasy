@@ -3,6 +3,7 @@ import { failure, HttpError } from "@/lib/http";
 import { createTransfer, transferInput } from "@/lib/transfers";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(r: Request) {
   try {
