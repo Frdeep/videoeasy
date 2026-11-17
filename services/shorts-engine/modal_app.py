@@ -17,6 +17,8 @@ import modal
 
 APP_NAME = "videoeasy-shorts"
 FONT_URL = "https://github.com/google/fonts/raw/main/ofl/inclusivesans/InclusiveSans%5Bwght%5D.ttf"
+OFL = "https://github.com/google/fonts/raw/main/ofl"
+CAPTION_FONTS = ["poppins/Poppins-Black.ttf", "poppins/Poppins-ExtraBold.ttf", "anton/Anton-Regular.ttf"]
 KEEP_SECONDS = 24 * 3600
 
 
@@ -30,7 +32,10 @@ image = (
     modal.Image.debian_slim(python_version="3.12")
     .apt_install("ffmpeg", "curl", "fontconfig")
     .pip_install("fastapi[standard]==0.115.6", "requests==2.32.3", "faster-whisper==1.1.1", "av==14.2.0")
-    .run_commands(f"mkdir -p /app/fonts && curl -fsSL -o /app/fonts/InclusiveSans.ttf '{FONT_URL}'")
+    .run_commands(
+        f"mkdir -p /app/fonts && curl -fsSL -o /app/fonts/InclusiveSans.ttf '{FONT_URL}'",
+        *[f"curl -fsSL -o /app/fonts/{f.split('/')[-1]} '{OFL}/{f}'" for f in CAPTION_FONTS],
+    )
     .env({"HF_HOME": "/models"})
     .run_function(_download_model)
     .add_local_python_source("pipeline", "captions", "montage")
@@ -78,9 +83,10 @@ def process(job_id: str) -> None:
         clips = []
         for i, m in enumerate(moments):
             _update(job_id, status="rendering", progress=f"{i}/{len(moments)}")
-            rendered = pipeline.render(src, meta, m, segments, job["ratio"], job["caption"], tmp, i)
+            rendered, clean, cue_list = pipeline.render(src, meta, m, segments, job["ratio"], job["caption"], tmp, i)
             shutil.copy(rendered, out_dir / f"clip{i}.mp4")
-            clips.append({"index": i, "start": round(m.start, 2), "end": round(m.end, 2),
+            shutil.copy(clean, out_dir / f"clip{i}_clean.mp4")
+            clips.append({"index": i, "start": round(m.start, 2), "end": round(m.end, 2), "cues": cue_list,
                           "score": round(m.score, 2), "text": m.text[:500]})
         clips_volume.commit()
         _update(job_id, status="succeeded", language=lang, clips=clips, progress=None)
@@ -212,12 +218,12 @@ def web():
         return public(job)
 
     @api.get("/v1/jobs/{job_id}/clips/{index}", dependencies=[Depends(auth)])
-    def clip(job_id: str, index: int) -> FileResponse:
+    def clip(job_id: str, index: int, clean: bool = False) -> FileResponse:
         job = jobs.get(job_id) if re.match(job_re, job_id) else None
         if not job or job.get("status") != "succeeded" or index < 0:
             raise HTTPException(404, "not ready")
         clips_volume.reload()
-        path = Path(DATA) / job_id / f"clip{index}.mp4"
+        path = Path(DATA) / job_id / (f"clip{index}_clean.mp4" if clean else f"clip{index}.mp4")
         if not path.is_file():
             raise HTTPException(404, "no such clip")
         return FileResponse(path, media_type="video/mp4")

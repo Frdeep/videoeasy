@@ -83,7 +83,7 @@ def worker() -> None:
             clips = []
             for i, m in enumerate(moments):
                 _set(job_id, status="rendering", progress=f"{i}/{len(moments)}")
-                pipeline.render(src, meta, m, segments, job["ratio"], job["caption"], wd, i)
+                pipeline.render(src, meta, m, segments, job["ratio"], job["caption"], wd, i)[0]
                 clips.append({"index": i, "start": round(m.start, 2), "end": round(m.end, 2),
                               "score": round(m.score, 2), "text": m.text[:500]})
             src.unlink(missing_ok=True)

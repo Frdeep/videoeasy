@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
-from captions import Word, build_ass
+from captions import STYLES, Word, build_ass, cues
 
 MAX_BYTES = int(os.environ.get("MAX_SOURCE_BYTES", str(4 * 1024 ** 3)))
 MAX_DURATION = float(os.environ.get("MAX_SOURCE_SECONDS", "5400"))  # 90 min
@@ -162,23 +162,31 @@ def _crop_filter(src_w: int, src_h: int, ratio: str) -> str:
 
 
 def render(src: Path, meta: dict, moment: Moment, segments: list[Segment], ratio: str,
-           caption: str, workdir: Path, index: int) -> Path:
+           caption: str, workdir: Path, index: int) -> tuple[Path, Path, list[dict]]:
+    """Returns (captioned clip, clean clip without burned text, caption cues).
+    The clean clip + cues let the editor show the captions as editable text."""
     out_w, out_h = RATIOS[ratio]
     words = [
         Word(w.text, w.start - moment.start, w.end - moment.start)
         for s in segments for w in s.words
         if w.start >= moment.start - 0.05 and w.end <= moment.end + 0.05
     ]
-    out = workdir / f"clip{index}.mp4"
-    vf = _crop_filter(meta["width"], meta["height"], ratio)
-    if caption != "none":
-        ass = workdir / f"clip{index}.ass"
-        ass.write_text(build_ass(words, caption, out_w, out_h), encoding="utf-8")
-        vf += f",subtitles={ass.name}:fontsdir=/app/fonts"
-    subprocess.run(
-        ["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{moment.start:.3f}", "-to", f"{moment.end:.3f}",
-         "-i", str(src), "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
-         "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out.name],
-        cwd=workdir, check=True,
-    )
-    return out
+    crop = _crop_filter(meta["width"], meta["height"], ratio)
+
+    def encode(vf: str, name: str) -> Path:
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{moment.start:.3f}", "-to", f"{moment.end:.3f}",
+             "-i", str(src), "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
+             "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", name],
+            cwd=workdir, check=True,
+        )
+        return workdir / name
+
+    clean = encode(crop, f"clip{index}_clean.mp4")
+    style = caption if caption in STYLES else "karaoke"
+    if caption == "none":
+        return clean, clean, cues(words, style)
+    ass = workdir / f"clip{index}.ass"
+    ass.write_text(build_ass(words, caption, out_w, out_h), encoding="utf-8")
+    out = encode(f"{crop},subtitles={ass.name}:fontsdir=/app/fonts", f"clip{index}.mp4")
+    return out, clean, cues(words, style)

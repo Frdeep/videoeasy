@@ -60,12 +60,15 @@ type Row = {
   clips: Clip[];
   created_at: string;
 };
+type Cue = { start: number; end: number; text: string; words?: { text: string; start: number; end: number }[] };
 type Clip = {
   index: number;
   start: number;
   end: number;
   text: string;
+  cues?: Cue[];
   key?: string;
+  clean_key?: string;
 };
 
 export function engine(path: string, init?: RequestInit) {
@@ -266,6 +269,12 @@ async function check(row: Row) {
     start: c.start,
     end: c.end,
     text: String(c.text ?? "").slice(0, 500),
+    // Caption cues for the editor (bounded, plain data only).
+    cues: (c.cues ?? []).slice(0, 400).map((q) => ({
+      start: Number(q.start) || 0,
+      end: Number(q.end) || 0,
+      text: String(q.text ?? "").slice(0, 200),
+    })),
   }));
   const claimed = await db().query(
     "update platform.shorts_jobs set status='importing', engine_state='importing', clips=$2, import_started_at=now() where id=$1 and status='processing'",
@@ -281,7 +290,22 @@ async function importClips(row: Row) {
   );
   const clips = [...row.clips];
   for (const clip of clips) {
-    if (clip.key) continue;
+    if (clip.key && clip.clean_key) continue;
+    if (!clip.clean_key) {
+      // Clean version (no burned-in captions) for the editor; older jobs have none.
+      const clean = await engine(`/v1/jobs/${row.id}/clips/${clip.index}?clean=true`, {
+        signal: AbortSignal.timeout(30000),
+      });
+      if (clean.ok) {
+        const cb = new Uint8Array(await clean.arrayBuffer());
+        if (cb.byteLength <= MAX_BYTES)
+          clip.clean_key = await storeBytes(`${row.user_id}/shorts/${row.id}/clip${clip.index}_clean.mp4`, cb, "video/mp4");
+      }
+      if (clip.key) {
+        await db().query("update platform.shorts_jobs set clips=$2 where id=$1 and status='importing'", [row.id, JSON.stringify(clips)]);
+        continue;
+      }
+    }
     const response = await engine(`/v1/jobs/${row.id}/clips/${clip.index}`, {
       signal: AbortSignal.timeout(30000),
     });
@@ -317,8 +341,26 @@ export async function listShorts(userId: string) {
   );
   return rows.map((r) => ({
     ...r,
-    clips: (r.clips as Clip[]).map(({ key, ...c }) => ({ ...c, ready: Boolean(key) })),
+    clips: (r.clips as Clip[]).map(({ key, clean_key, cues, ...c }) => ({
+      ...c,
+      ready: Boolean(key),
+      editable: Boolean(clean_key),
+      captions: Boolean(cues?.length),
+    })),
   }));
+}
+
+/** Clean clip key + caption cues of a finished short (for the editor). */
+export async function clipForEditor(userId: string, id: string, index: number) {
+  const {
+    rows: [row],
+  } = await db().query<{ clips: Clip[] }>(
+    "select clips from platform.shorts_jobs where id=$1 and user_id=$2 and status='succeeded' and deleted_at is null",
+    [id, userId],
+  );
+  const clip = row?.clips.find((c) => c.index === index);
+  if (!clip?.key) return null;
+  return { key: clip.clean_key ?? clip.key, clean: Boolean(clip.clean_key), cues: clip.cues ?? [] };
 }
 
 export async function clipKey(userId: string, id: string, index: number) {
