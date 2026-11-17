@@ -8,6 +8,7 @@ const sdk = new Stripe("sk_test_fixture_only");
 beforeEach(() => {
   process.env.STRIPE_SECRET_KEY = "sk_test_fixture_only";
   process.env.STRIPE_WEBHOOK_SECRET = secret;
+  delete process.env.STRIPE_MODE;
   vi.clearAllMocks();
 });
 function req(payload: string, body = payload) {
@@ -61,5 +62,35 @@ describe("raw webhook body verification with real Stripe signature SDK", () => {
       (await POST(req(JSON.stringify({ id: "evt_fixture", livemode: false }))))
         .status,
     ).toBe(503);
+  });
+  it("live mode accepts a signed live event and rejects a test event", async () => {
+    process.env.STRIPE_MODE = "live";
+    process.env.STRIPE_SECRET_KEY = "sk_live_fixture_only";
+    expect(
+      (
+        await POST(
+          req(
+            JSON.stringify({
+              id: "evt_fixture",
+              type: "invoice.paid",
+              livemode: true,
+            }),
+          ),
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await POST(req(JSON.stringify({ id: "evt_fixture", livemode: false }))))
+        .status,
+    ).toBe(400);
+    expect(mock.processEvent).toHaveBeenCalledOnce();
+  });
+  it("rejects every event when the key does not match STRIPE_MODE", async () => {
+    process.env.STRIPE_MODE = "live";
+    expect(
+      (await POST(req(JSON.stringify({ id: "evt_fixture", livemode: true }))))
+        .status,
+    ).toBe(400);
+    expect(mock.processEvent).not.toHaveBeenCalled();
   });
 });

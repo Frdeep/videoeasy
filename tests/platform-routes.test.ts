@@ -6,7 +6,7 @@ const mock = vi.hoisted(() => ({
 }));
 vi.mock("../src/lib/auth", () => ({ requireUser: mock.user }));
 vi.mock("../src/lib/db", () => ({ db: () => ({ query: mock.query }) }));
-vi.mock("../src/lib/storage", () => ({ downloadUrl: mock.url }));
+vi.mock("../src/lib/media-store", () => ({ signedUrl: mock.url }));
 import { GET } from "../src/app/api/platform/jobs/[id]/download/route";
 const id = "44444444-4444-4444-8444-444444444444";
 beforeEach(() => {
@@ -58,6 +58,6 @@ describe("private downloads", () => {
         })
       ).status,
     ).toBe(303);
-    expect(mock.url).toHaveBeenCalledWith("private-owner-key");
+    expect(mock.url).toHaveBeenCalledWith("private-owner-key", true);
   });
 });

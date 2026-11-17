@@ -9,6 +9,16 @@ type Job = {
   credits: number;
   created_at: string;
   mock_result: boolean;
+  provider_state: string | null;
+  content_type: string | null;
+};
+const progress: Record<string, string> = {
+  submitting: "Envoi au générateur…",
+  waiting: "Dans la file du générateur…",
+  queuing: "Dans la file du générateur…",
+  generating: "Génération en cours…",
+  importing: "Enregistrement de la vidéo…",
+  import_retry: "Enregistrement de la vidéo…",
 };
 export function JobsGallery() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -85,7 +95,32 @@ export function JobsGallery() {
           .map((j) => (
             <article className="job-card" key={j.id}>
               <div className="job-preview">
-                {j.mock_result ? "TEST TECHNIQUE SIMULÉ" : labels[j.status]}
+                {j.status === "succeeded" &&
+                !j.mock_result &&
+                j.content_type?.startsWith("video/") ? (
+                  <video
+                    controls
+                    playsInline
+                    preload="metadata"
+                    src={`/api/platform/jobs/${j.id}/download?view=1`}
+                  />
+                ) : j.status === "succeeded" &&
+                  !j.mock_result &&
+                  j.content_type?.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt={j.prompt}
+                    src={`/api/platform/jobs/${j.id}/download?view=1`}
+                  />
+                ) : j.mock_result ? (
+                  "TEST TECHNIQUE SIMULÉ"
+                ) : j.status === "running" ? (
+                  (progress[j.provider_state ?? ""] ?? "En cours…")
+                ) : j.status === "uncertain" ? (
+                  "Vérification en cours par l'équipe"
+                ) : (
+                  labels[j.status]
+                )}
               </div>
               <h3>{j.prompt}</h3>
               <p>
