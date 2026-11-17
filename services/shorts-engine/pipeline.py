@@ -19,6 +19,16 @@ ALLOWED_HOSTS = {
     for h in os.environ.get("ALLOWED_SOURCE_HOSTS", "pchdggpprfnyzmcnpigy.supabase.co").split(",")
     if h.strip()
 }
+# Hugging Face Storage Buckets: signed gateway URLs redirect to the HF CDN.
+ALLOWED_SUFFIXES = (".s3.hf.co", ".hf.co", ".huggingface.co")
+
+
+def _host_ok(url: str) -> bool:
+    p = urlparse(url)
+    host = (p.hostname or "").lower()
+    return p.scheme == "https" and (host in ALLOWED_HOSTS or host.endswith(ALLOWED_SUFFIXES))
+
+
 RATIOS = {"9:16": (1080, 1920), "1:1": (1080, 1080), "16:9": (1920, 1080)}
 HOOKS = re.compile(
     r"\b(secret|personne|jamais|pourquoi|comment|voici|attention|erreur|vrai|incroyable|"
@@ -44,13 +54,22 @@ class Moment:
 
 
 def download(url: str, dest: Path) -> None:
-    """Fetch only https URLs on allow-listed hosts, no redirects, size-capped."""
+    """Fetch https URLs on allow-listed hosts only (every redirect hop is
+    re-checked), size-capped."""
     import requests
 
-    p = urlparse(url)
-    if p.scheme != "https" or (p.hostname or "").lower() not in ALLOWED_HOSTS:
-        raise ValueError("source host not allowed")
-    with requests.get(url, stream=True, timeout=(10, 60), allow_redirects=False) as r:
+    for _ in range(4):
+        if not _host_ok(url):
+            raise ValueError("source host not allowed")
+        r = requests.get(url, stream=True, timeout=(10, 60), allow_redirects=False)
+        if r.status_code in (301, 302, 303, 307, 308) and r.headers.get("location"):
+            url = requests.compat.urljoin(url, r.headers["location"])
+            r.close()
+            continue
+        break
+    else:
+        raise ValueError("too many redirects")
+    with r:
         if r.status_code != 200:
             raise ValueError(f"source fetch failed: HTTP {r.status_code}")
         total = 0

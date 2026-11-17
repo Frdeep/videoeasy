@@ -56,8 +56,9 @@ export async function hfPut(key: string, bytes: Uint8Array, contentType: string)
   return HF_PREFIX + key;
 }
 
-/** Short-lived signed link: 60 s to download, 15 min for in-page playback. */
-export async function hfSignedUrl(prefixedKey: string, download = true) {
+/** Short-lived signed link: 60 s to download, 15 min for in-page playback
+ * (or a custom lifetime, e.g. 2 h for the editing engine). */
+export async function hfSignedUrl(prefixedKey: string, download = true, expiresIn?: number) {
   const key = strip(prefixedKey);
   return getSignedUrl(
     s3(),
@@ -68,7 +69,7 @@ export async function hfSignedUrl(prefixedKey: string, download = true) {
         ? `attachment; filename="${key.split("/").pop()}"`
         : undefined,
     }),
-    { expiresIn: download ? 60 : 900 },
+    { expiresIn: expiresIn ?? (download ? 60 : 900) },
   );
 }
 

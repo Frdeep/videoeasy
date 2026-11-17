@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ScheduleButton } from "./schedule-button";
 import { useT } from "./i18n";
+import { NextSteps, TransferDialog, type VideoRef } from "./video-actions";
 type Job = {
   id: string;
   prompt: string;
@@ -25,9 +26,21 @@ const progress: Record<string, string> = {
   importing: "Enregistrement de la vidéo…",
   import_retry: "Enregistrement de la vidéo…",
 };
+type Montage = {
+  id: string;
+  status: "processing" | "importing" | "succeeded" | "failed";
+  engine_state: string | null;
+  options: { ratio: string; text: string; transition: string };
+  duration: string | null;
+  error_code: string | null;
+  created_at: string;
+};
+
 export function JobsGallery() {
   const { t, dl } = useT();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [montages, setMontages] = useState<Montage[]>([]);
+  const [transfer, setTransfer] = useState<VideoRef | null>(null);
   const [message, setMessage] = useState("Chargement…");
   const [filter, setFilter] = useState("all");
   const [busy, setBusy] = useState(false);
@@ -38,6 +51,8 @@ export function JobsGallery() {
       if (!r.ok) throw new Error(d.error);
       setJobs(d.jobs);
       setMessage("");
+      const m = await fetch("/api/montage").then((x) => (x.ok ? x.json() : null)).catch(() => null);
+      if (m) setMontages(m.montages);
     } catch {
       setMessage(t("Galerie indisponible. Réessayez."));
     }
@@ -47,11 +62,14 @@ export function JobsGallery() {
     const timer = setInterval(refresh, 10000);
     return () => clearInterval(timer);
   }, []);
-  async function remove(id: string) {
+  async function remove(id: string, kind: "job" | "montage" = "job") {
     if (!confirm(t("Retirer cette création de votre galerie ?"))) return;
     setBusy(true);
     try {
-      const r = await fetch(`/api/platform/jobs/${id}`, { method: "DELETE" });
+      const r = await fetch(
+        kind === "job" ? `/api/platform/jobs/${id}` : `/api/montage/${id}`,
+        { method: "DELETE" },
+      );
       if (!r.ok) throw Error();
       await refresh();
     } catch {
@@ -86,7 +104,7 @@ export function JobsGallery() {
         ))}
       </div>
       <p role="status">{message === "Chargement…" ? t(message) : message}</p>
-      {!message && !jobs.length && (
+      {!message && !jobs.length && !montages.length && (
         <div className="empty-state">
           <h2>{t("Votre première vidéo vous attend.")}</h2>
 
@@ -96,6 +114,51 @@ export function JobsGallery() {
         </div>
       )}
       <div className="media-grid">
+        {(filter === "all" || filter === "succeeded" || filter === "failed") &&
+          montages
+            .filter((m) => filter === "all" || m.status === filter)
+            .map((m) => (
+              <article className="job-card" key={m.id}>
+                <div className="job-preview">
+                  {m.status === "succeeded" ? (
+                    <video controls playsInline preload="metadata" src={`/api/montage/${m.id}/download?view=1`} />
+                  ) : m.status === "failed" ? (
+                    t("Le montage a échoué. Il ne compte pas dans votre quota.")
+                  ) : (
+                    t("Montage en cours…")
+                  )}
+                </div>
+                <h3>
+                  <span className="tag">{t("Montage")}</span> {m.options.text || t("Sans texte")}
+                </h3>
+                <p>
+                  {m.options.ratio}
+                  {m.duration ? ` · ${Math.round(Number(m.duration))} s` : ""}
+                </p>
+                <p>{new Date(m.created_at).toLocaleString(dl)}</p>
+                {m.status === "succeeded" && (
+                  <>
+                    <NextSteps video={{ kind: "montage", id: m.id }} onTransfer={() => setTransfer({ kind: "montage", id: m.id })} />
+                    <div className="card-actions">
+                      <a className="text-link" href={`/api/montage/${m.id}/download`}>
+                        {t("Télécharger")}
+                      </a>
+                      <button className="text-link" onClick={() => setTransfer({ kind: "montage", id: m.id })}>
+                        {t("Transférer")}
+                      </button>
+                      <a className="text-link" href={`/montage?from=montage:${m.id}`}>
+                        {t("Monter")}
+                      </a>
+                    </div>
+                  </>
+                )}
+                {["failed", "succeeded"].includes(m.status) && (
+                  <button disabled={busy} onClick={() => remove(m.id, "montage")}>
+                    {t("Retirer")}
+                  </button>
+                )}
+              </article>
+            ))}
         {jobs
           .filter((j) => filter === "all" || j.status === filter)
           .map((j) => (
@@ -138,13 +201,25 @@ export function JobsGallery() {
                 {j.status === "failed" ? ` · ${t("crédits rendus")}` : ""}
               </p>
               <p>{new Date(j.created_at).toLocaleString(dl)}</p>
+              {j.status === "succeeded" && !j.mock_result && j.content_type?.startsWith("video/") && (
+                <NextSteps video={{ kind: "job", id: j.id }} onTransfer={() => setTransfer({ kind: "job", id: j.id })} />
+              )}
               {j.status === "succeeded" && (
-                <a
-                  className="text-link"
-                  href={`/api/platform/jobs/${j.id}/download`}
-                >
-                  {t("Télécharger")}
-                </a>
+                <div className="card-actions">
+                  <a className="text-link" href={`/api/platform/jobs/${j.id}/download`}>
+                    {t("Télécharger")}
+                  </a>
+                  {!j.mock_result && j.content_type?.startsWith("video/") && (
+                    <>
+                      <button className="text-link" onClick={() => setTransfer({ kind: "job", id: j.id })}>
+                        {t("Transférer")}
+                      </button>
+                      <a className="text-link" href={`/montage?from=job:${j.id}`}>
+                        {t("Monter")}
+                      </a>
+                    </>
+                  )}
+                </div>
               )}
               {j.status === "succeeded" && !j.mock_result && (
                 <ScheduleButton
@@ -163,6 +238,7 @@ export function JobsGallery() {
             </article>
           ))}
       </div>
+      {transfer && <TransferDialog video={transfer} onClose={() => setTransfer(null)} />}
     </>
   );
 }

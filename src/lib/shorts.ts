@@ -67,7 +67,7 @@ type Clip = {
   key?: string;
 };
 
-function engine(path: string, init?: RequestInit) {
+export function engine(path: string, init?: RequestInit) {
   return fetch(`${env("SHORTS_ENGINE_URL").replace(/\/$/, "")}${path}`, {
     ...init,
     headers: {

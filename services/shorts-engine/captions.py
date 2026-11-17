@@ -90,3 +90,24 @@ def build_ass(words: list[Word], style: str, width: int, height: int) -> str:
         else:
             lines.append(f"Dialogue: 0,{_ts(g[0].start)},{_ts(g[-1].end)},Cap,,0,0,0,,{' '.join(texts)}")
     return header + "\n".join(lines) + "\n"
+
+
+def build_title_ass(text: str, duration: float, width: int, height: int) -> str:
+    """One boxed caption shown for the whole montage, in the lower safe zone."""
+    s = min(width, height) / 1080
+    fs = round(64 * s) if height >= width else round(56 * s)
+    margin_lr = round(width * 0.12)
+    margin_v = round(height * (0.24 if height > width else 0.1))
+    safe = _esc(" ".join(text.split()))[:200]
+    return (
+        "[Script Info]\nScriptType: v4.00+\n"
+        f"PlayResX: {width}\nPlayResY: {height}\nWrapStyle: 0\n\n"
+        "[V4+ Styles]\n"
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "
+        "BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, "
+        "BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
+        f"Style: T,Inclusive Sans,{fs},&H00000000,&H00000000,&H0000C8FF,&H0000C8FF,"
+        f"0,0,0,0,100,100,0,0,3,{round(16 * s)},0,2,{margin_lr},{margin_lr},{margin_v},1\n\n"
+        "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+        f"Dialogue: 0,{_ts(0)},{_ts(duration)},T,,0,0,0,,{{\\fad(250,250)}}{safe}\n"
+    )

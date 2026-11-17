@@ -33,7 +33,7 @@ image = (
     .run_commands(f"mkdir -p /app/fonts && curl -fsSL -o /app/fonts/InclusiveSans.ttf '{FONT_URL}'")
     .env({"HF_HOME": "/models"})
     .run_function(_download_model)
-    .add_local_python_source("pipeline", "captions")
+    .add_local_python_source("pipeline", "captions", "montage")
 )
 
 app = modal.App(APP_NAME)
@@ -91,6 +91,36 @@ def process(job_id: str) -> None:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+@app.function(image=image, cpu=4.0, memory=8192, timeout=1800, max_containers=2,
+              volumes={DATA: clips_volume})
+def process_montage(job_id: str) -> None:
+    import shutil
+    import tempfile
+    import traceback
+    from pathlib import Path
+
+    import montage
+
+    job = jobs[job_id]
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        _update(job_id, status="rendering")
+        out = montage.render_montage(job["inputs"], job["ratio"], job.get("text") or "",
+                                     job["transition"], tmp)
+        dur, _ = montage._info(out)
+        out_dir = Path(DATA) / job_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy(out, out_dir / "clip0.mp4")
+        clips_volume.commit()
+        _update(job_id, status="succeeded",
+                clips=[{"index": 0, "start": 0, "end": round(dur, 2), "score": 0, "text": ""}])
+    except Exception as e:  # noqa: BLE001 — reported to the caller
+        traceback.print_exc()
+        _update(job_id, status="failed", error=str(e)[:300])
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 @app.function(image=image, schedule=modal.Period(hours=6), volumes={DATA: clips_volume})
 def janitor() -> None:
     import shutil
@@ -134,8 +164,20 @@ def web():
         ratio: str = Field(pattern=r"^(9:16|1:1|16:9)$")
         caption: str
 
+    class MontageClip(BaseModel):
+        url: str = Field(max_length=4096)
+        start: float = Field(ge=0, le=600)
+        end: float = Field(ge=0, le=600)
+
+    class MontageRequest(BaseModel):
+        job_id: str = Field(pattern=job_re)
+        clips: list[MontageClip] = Field(min_length=1, max_length=10)
+        ratio: str = Field(pattern=r"^(9:16|1:1|16:9)$")
+        text: str = Field(default="", max_length=200)
+        transition: str = Field(pattern=r"^(cut|fade)$")
+
     def public(job: dict) -> dict:
-        return {k: v for k, v in job.items() if k != "source_url"}
+        return {k: v for k, v in job.items() if k not in ("source_url", "inputs")}
 
     @api.get("/")
     def health() -> dict:
@@ -150,6 +192,17 @@ def web():
             return public(jobs[req.job_id])
         process.spawn(req.job_id)
         return public(job)
+
+    @api.post("/v1/montage", dependencies=[Depends(auth)], status_code=202)
+    def create_montage(req: MontageRequest = Body(...)) -> dict:
+        data = req.model_dump()
+        job = {"kind": "montage", "inputs": data["clips"], "ratio": data["ratio"],
+               "text": data["text"], "transition": data["transition"],
+               "status": "queued", "created_at": time.time(), "updated_at": time.time()}
+        if not jobs.put(req.job_id, job, skip_if_exists=True):
+            return {"job_id": req.job_id, "status": jobs[req.job_id]["status"]}
+        process_montage.spawn(req.job_id)
+        return {"job_id": req.job_id, "status": "queued"}
 
     @api.get("/v1/jobs/{job_id}", dependencies=[Depends(auth)])
     def status(job_id: str) -> dict:

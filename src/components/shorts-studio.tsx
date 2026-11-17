@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Reveal, RiseText, Segmented } from "./motion";
 import { useSnapIndex } from "./use-mobile";
 import { useT } from "./i18n";
+import { TransferDialog } from "./video-actions";
 
 // Long video -> shorts. Upload goes straight from the browser to private
 // storage (signed URL); the server hands it to the engine and imports the
@@ -90,6 +91,7 @@ function ClipViewer({
   const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
   const current = useSnapIndex(ref, "y");
+  const [sending, setSending] = useState<number | null>(null);
   const clips = run.clips.filter((c) => c.ready);
   const close = useRef(onClose);
   close.current = onClose;
@@ -150,6 +152,17 @@ function ClipViewer({
           {t("Télécharger")}
         </a>
       )}
+      {clips[current] && (
+        <button className="viewer-transfer" onClick={() => setSending(clips[current].index)}>
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+            <path d="M4 12h13M12 6l6 6-6 6" />
+          </svg>
+          {t("Transférer")}
+        </button>
+      )}
+      {sending !== null && (
+        <TransferDialog video={{ kind: "short", id: run.id, index: sending }} onClose={() => setSending(null)} />
+      )}
       <span className="viewer-count">
         {current + 1} / {clips.length}
       </span>
@@ -196,10 +209,27 @@ function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
       {run.status === "succeeded" && (
         <div className="clip-rail">
           {ready.map((c, i) => (
-            <button key={c.index} className="clip-thumb" onClick={() => onOpen(i)}>
+            <div
+              key={c.index}
+              className="clip-thumb"
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpen(i)}
+              onKeyDown={(e) => e.key === "Enter" && onOpen(i)}
+            >
               <video src={`${clipUrl(run.id, c.index)}#t=0.5`} muted playsInline preload="metadata" />
               <span>{Math.round(c.end - c.start)} s</span>
-            </button>
+              <a
+                className="thumb-dl"
+                href={clipUrl(run.id, c.index, false)}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={t("Télécharger")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+                  <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+                </svg>
+              </a>
+            </div>
           ))}
         </div>
       )}

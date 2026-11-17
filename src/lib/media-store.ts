@@ -220,8 +220,9 @@ export async function objectInfo(key: string) {
   };
 }
 
-/** Long-lived (2 h) read URL handed to the shorts engine only. */
+/** Long-lived (2 h) read URL handed to the editing/shorts engine only. */
 export async function engineReadUrl(key: string) {
+  if (key.startsWith(HF_PREFIX)) return hfSignedUrl(key, false, 7200);
   const response = await fetch(
     `${storageBase()}/object/sign/${BUCKET}/${key}`,
     {
