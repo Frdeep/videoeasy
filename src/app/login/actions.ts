@@ -53,7 +53,7 @@ export async function authenticate(form: FormData) {
       )
         destination = errorUrl("wait");
     } else if ("session" in result.data && result.data.session)
-      destination = "/account";
+      destination = safeNext(form.get("next")) ?? "/account";
     else if (mode === "signup") destination = "/login?sent=confirmation";
     else if (mode === "magic") destination = "/login?sent=magic";
   } catch {
@@ -89,4 +89,10 @@ export async function resendConfirmation(form: FormData) {
     destination = "/login?mode=resend&error=invalid";
   }
   redirect(destination);
+}
+
+/** Only same-site paths (e.g. back to /editor/…) — never another domain. */
+function safeNext(value: FormDataEntryValue | null) {
+  const next = typeof value === "string" ? value : "";
+  return /^\/(?![\/\\])[\w\-./?=&%:]*$/.test(next) && next.length < 300 ? next : null;
 }

@@ -5,7 +5,7 @@ import { getT } from "@/lib/locale";
 export default async function Login({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string; error?: string; mode?: string }>;
+  searchParams: Promise<{ sent?: string; error?: string; mode?: string; next?: string }>;
 }) {
   const params = await searchParams;
   const { t } = await getT();
@@ -75,6 +75,7 @@ export default async function Login({
             key={resend ? "resend" : mode}
           >
             <input name="mode" type="hidden" value={mode} />
+            {params.next && <input name="next" type="hidden" value={params.next} />}
             <label>
               {t("E-mail")}
               <input
