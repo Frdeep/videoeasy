@@ -27,6 +27,7 @@ suite("Platform jobs with real PostgreSQL and no provider requests", () => {
       "202611160001_billing.sql",
       "202611160002_platform.sql",
       "202611170001_kie_generation.sql",
+      "202611170002_calendar_rewrite.sql",
     ])
       await db().query(await readFile("supabase/migrations/" + file, "utf8"));
   });

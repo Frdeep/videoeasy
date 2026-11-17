@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ScheduleButton } from "./schedule-button";
 type Job = {
   id: string;
   prompt: string;
@@ -11,6 +12,9 @@ type Job = {
   mock_result: boolean;
   provider_state: string | null;
   content_type: string | null;
+  scheduled_at: string | null;
+  schedule_channel: string | null;
+  schedule_note: string | null;
 };
 const progress: Record<string, string> = {
   submitting: "Envoi au générateur…",
@@ -128,9 +132,8 @@ export function JobsGallery() {
                   ? "Vertical 9:16"
                   : j.model_id.includes("16x9")
                     ? "Paysage 16:9"
-                    : j.model_id}{" "}
-                · {j.credits} crédits
-                {j.status === "failed" ? " · rendus" : ""}
+                    : j.model_id}
+                {j.status === "failed" ? " · crédits rendus" : ""}
               </p>
               <p>{new Date(j.created_at).toLocaleString("fr-FR")}</p>
               {j.status === "succeeded" && (
@@ -138,9 +141,17 @@ export function JobsGallery() {
                   className="text-link"
                   href={`/api/platform/jobs/${j.id}/download`}
                 >
-                  Télécharger{" "}
-                  {j.mock_result ? "le fichier de test" : "la création"} →
+                  Télécharger
                 </a>
+              )}
+              {j.status === "succeeded" && !j.mock_result && (
+                <ScheduleButton
+                  jobId={j.id}
+                  scheduledAt={j.scheduled_at}
+                  channel={j.schedule_channel}
+                  note={j.schedule_note}
+                  onSaved={refresh}
+                />
               )}
               {["failed", "succeeded"].includes(j.status) && (
                 <button disabled={busy} onClick={() => remove(j.id)}>

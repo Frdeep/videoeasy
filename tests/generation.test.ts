@@ -50,6 +50,7 @@ suite("Kie generation lifecycle with real PostgreSQL", () => {
       "202611160001_billing.sql",
       "202611160002_platform.sql",
       "202611170001_kie_generation.sql",
+      "202611170002_calendar_rewrite.sql",
     ])
       await db().query(await readFile("supabase/migrations/" + f, "utf8"));
   });
@@ -244,6 +245,69 @@ suite("Kie generation lifecycle with real PostgreSQL", () => {
       "truncate platform.jobs; update billing.reservations set state='released'",
     );
     await expect(launch()).rejects.toThrow("non activée");
+  });
+
+  it("only the owner can schedule a finished video", async () => {
+    kie.createTask.mockResolvedValue("task_7");
+    kie.getTask.mockResolvedValue({
+      state: "success",
+      resultUrls: ["https://cdn.example.com/v.mp4"],
+      failCode: null,
+      creditsConsumed: 124,
+    });
+    media.importResult.mockResolvedValue({
+      key: "k",
+      contentType: "video/mp4",
+      size: 1,
+    });
+    const id = await launch();
+    await submitJob(id);
+    await refreshJob(id, true);
+    const { PATCH } = await import("../src/app/api/platform/jobs/[id]/route");
+    const auth = await import("../src/lib/auth");
+    const spy = vi.spyOn(auth, "requireUser");
+    vi.spyOn(auth, "requireOrigin").mockImplementation(() => {});
+    const call = (body: object) =>
+      PATCH(
+        new Request("http://localhost/x", {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        }),
+        {
+          params: Promise.resolve({ id }),
+        },
+      );
+    spy.mockResolvedValue({
+      id: "55555555-5555-4555-8555-555555555555",
+    } as never);
+    expect(
+      (
+        await call({
+          scheduledAt: "2026-12-01T18:00:00+01:00",
+          channel: "tiktok",
+        })
+      ).status,
+    ).toBe(404);
+    spy.mockResolvedValue({ id: uid } as never);
+    expect(
+      (
+        await call({
+          scheduledAt: "2026-12-01T18:00:00+01:00",
+          channel: "tiktok",
+          note: "Lancement",
+        })
+      ).status,
+    ).toBe(200);
+    expect(await job(id)).toMatchObject({
+      schedule_channel: "tiktok",
+      schedule_note: "Lancement",
+    });
+    expect((await call({ scheduledAt: null })).status).toBe(200);
+    expect(await job(id)).toMatchObject({
+      scheduled_at: null,
+      schedule_channel: null,
+    });
+    expect((await call({ scheduledAt: "pas une date" })).status).toBe(400);
   });
 
   it("callback for an unknown task does nothing", async () => {

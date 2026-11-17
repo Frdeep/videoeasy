@@ -1,17 +1,12 @@
 import type { ReactNode } from "react";
-import { Archivo, Inter } from "next/font/google";
+import { Inclusive_Sans } from "next/font/google";
 import { BottomNav, Nav } from "@/components/nav";
 import "./style.css";
 
-const display = Archivo({
-  subsets: ["latin"],
-  axes: ["wdth"],
-  variable: "--font-display",
-  display: "swap",
-});
-const text = Inter({
-  subsets: ["latin"],
-  variable: "--font-text",
+const inclusive = Inclusive_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: "500",
+  variable: "--font-inclusive",
   display: "swap",
 });
 
@@ -22,7 +17,7 @@ export const metadata = {
 };
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="fr" className={`${display.variable} ${text.variable}`}>
+    <html lang="fr" className={inclusive.variable}>
       <body>
         <a className="skip" href="#content">
           Aller au contenu

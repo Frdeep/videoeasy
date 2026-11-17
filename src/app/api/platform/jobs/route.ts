@@ -11,7 +11,7 @@ export async function GET() {
     // Gallery polling advances this user's real jobs (bounded, idempotent).
     await advanceUserJobs(user.id);
     const { rows } = await db().query(
-      "select id,model_id,prompt,credits,status,mock_result,created_at,provider_state,content_type from platform.jobs where user_id=$1 and deleted_at is null order by created_at desc limit 100",
+      "select id,model_id,prompt,credits,status,mock_result,created_at,provider_state,content_type,scheduled_at,schedule_channel,schedule_note from platform.jobs where user_id=$1 and deleted_at is null order by created_at desc limit 100",
       [user.id],
     );
     return Response.json(

@@ -6,7 +6,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 const tabs = [
   ["/", "Accueil"],
   ["/studio", "Studio"],
+  ["/shorts", "Shorts"],
   ["/gallery", "Créations"],
+  ["/calendar", "Calendrier"],
   ["/pricing", "Tarifs"],
 ] as const;
 
@@ -14,6 +16,7 @@ const icons: Record<string, string> = {
   "/": "M4 11.5 12 5l8 6.5V20h-5v-5H9v5H4z",
   "/gallery": "M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z",
   "/pricing": "M3 8h18v10H3zM3 11h18M7 15h3",
+  "/calendar": "M3 6h18v15H3zM3 10h18M8 3v5M16 3v5",
   "/account":
     "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6",
 };
@@ -155,7 +158,7 @@ export function BottomNav() {
         ["/", "Accueil"],
         ["/gallery", "Créations"],
         ["/studio", "Créer"],
-        ["/pricing", "Tarifs"],
+        ["/calendar", "Agenda"],
         ["/account", "Compte"],
       ].map(([href, label]) => (
         <Link
