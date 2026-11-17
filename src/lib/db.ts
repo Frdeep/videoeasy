@@ -1,10 +1,11 @@
 import "server-only";
 import { Pool, type PoolClient } from "pg";
 import { env } from "./config";
+import { poolConfig } from "./db-config";
 let pool: Pool;
 export function db() {
   return (pool ??= new Pool({
-    connectionString: env("DATABASE_URL"),
+    ...poolConfig(env("DATABASE_URL")),
     max: 5,
     connectionTimeoutMillis: 10000,
   }));
