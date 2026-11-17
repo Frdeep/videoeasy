@@ -106,3 +106,10 @@ export const starters: Record<Genre, string> = {
   Cinématographique:
     "Un coureur traverse une rue mouillée la nuit, néons, ralenti, travelling latéral, grain de film, format cinéma.",
 };
+
+// Vidéo « Le mot du fondateur » affichée dans le pied de page.
+// Hébergée dans le bucket public Supabase « showcase ».
+export const founderVideo: { src: string; poster: string } = {
+  src: "",
+  poster: "",
+};

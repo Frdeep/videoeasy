@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useT } from "./i18n";
 
 const inspirations = {
   orb: "Une sphère de verre irisée flotte dans un espace sombre. Lumière violette, reflets subtils, mouvement lent de caméra, ambiance cinématographique.",
@@ -9,6 +10,7 @@ const inspirations = {
     "Une sculpture florale abstraite aux pétales translucides. Éclairage de studio doux, textures délicates et composition minimaliste.",
 };
 export function Studio({ preview = false }: { preview?: boolean }) {
+  const { t } = useT();
   const [kind, setKind] = useState("video");
   const [prompt, setPrompt] = useState("");
   const [ratio, setRatio] = useState("16:9");
@@ -20,66 +22,65 @@ export function Studio({ preview = false }: { preview?: boolean }) {
       if (draft) setPrompt(draft);
       const idea = new URLSearchParams(location.search).get("idea");
       if (idea && idea in inspirations)
-        setPrompt(inspirations[idea as keyof typeof inspirations]);
+        setPrompt(t(inspirations[idea as keyof typeof inspirations]));
     } catch {}
   }, []);
   function save() {
     try {
       localStorage.setItem("videoeasy-prompt-draft", prompt);
       setSaved(true);
-      setNotice("Brouillon enregistré sur cet appareil.");
+      setNotice(t("Brouillon enregistré sur cet appareil."));
     } catch {
       setNotice(
-        "Le stockage local est indisponible. Copiez votre texte pour le conserver.",
+        t("Le stockage local est indisponible. Copiez votre texte pour le conserver."),
       );
     }
   }
   return (
     <div className="workspace">
       <aside className="studio-sidebar">
-        <p className="eyebrow">VOTRE ESPACE CRÉATIF</p>
+        <p className="eyebrow">{t("VOTRE ESPACE CRÉATIF")}</p>
         <h2>
           Studio<span>✦</span>
         </h2>
         <div className="sidebar-links">
           <Link className="selected" href={preview ? "/explore" : "/studio"}>
-            ✧ <span>Créer une idée</span>
+            ✧ <span>{t("Créer une idée")}</span>
             <span>→</span>
           </Link>
           <Link href="/gallery">
-            ▦ <span>Mes créations</span>
+            ▦ <span>{t("Mes créations")}</span>
           </Link>
           <Link href="/account">
-            ◷ <span>Mon abonnement</span>
+            ◷ <span>{t("Mon abonnement")}</span>
           </Link>
         </div>
         <div className="sidebar-note">
           <span className="status-dot" />
-          <h3>Tout commence par une idée.</h3>
+          <h3>{t("Tout commence par une idée.")}</h3>
           <p>
-            Décrivez une scène, une lumière, une émotion. Le reste se construit
-            ici.
+            {t("Décrivez une scène, une lumière, une émotion. Le reste se construit ici.")}
           </p>
         </div>
         <Link className="sidebar-bottom" href="/pricing">
-          Découvrir les formules →
+          {t("Découvrir les formules")} →
         </Link>
       </aside>
       <div className="studio-main">
         <div className="section-heading">
           <div>
             <p className="eyebrow">
-              {preview ? "DÉCOUVRIR LE STUDIO" : "STUDIO PERSONNEL"}
+              {preview ? t("DÉCOUVRIR LE STUDIO") : t("STUDIO PERSONNEL")}
             </p>
-            <h1>Que voulez-vous imaginer ?</h1>
+            <h1>{t("Que voulez-vous imaginer ?")}</h1>
           </div>
           <span className="pill">
-            {preview ? "Aperçu interactif" : "Bêta privée"}
+            {preview ? t("Aperçu interactif") : t("Bêta privée")}
           </span>
         </div>
         <div className="studio-columns">
           <section className="composer">
-            <div className="tabs" role="group" aria-label="Type de création">
+            <div className="tabs" role="group" aria-label={t("Type de création")}>
               <button
                 className={kind === "video" ? "active" : ""}
                 aria-pressed={kind === "video"}
@@ -88,7 +89,7 @@ export function Studio({ preview = false }: { preview?: boolean }) {
                   setNotice("");
                 }}
               >
-                ◁ Vidéo
+                ◁ {t("Vidéo")}
               </button>
               <button
                 className={kind === "image" ? "active" : ""}
@@ -98,11 +99,11 @@ export function Studio({ preview = false }: { preview?: boolean }) {
                   setNotice("");
                 }}
               >
-                ▧ Image
+                ▧ {t("Image")}
               </button>
             </div>
             <label className="field-label" htmlFor="prompt">
-              Votre idée <span>{prompt.length}/2500</span>
+              {t("Votre idée")} <span>{prompt.length}/2500</span>
             </label>
             <textarea
               id="prompt"
@@ -112,17 +113,17 @@ export function Studio({ preview = false }: { preview?: boolean }) {
                 setPrompt(e.target.value);
                 setSaved(false);
               }}
-              placeholder="Une ville futuriste sous la pluie, des reflets néon dans les rues, un travelling lent au niveau du sol…"
+              placeholder={t("Une ville futuriste sous la pluie, des reflets néon dans les rues, un travelling lent au niveau du sol…")}
             />
             <div className="prompt-tools">
               <button
                 className="text-link"
                 onClick={() => {
-                  setPrompt(inspirations[kind === "video" ? "dune" : "bloom"]);
+                  setPrompt(t(inspirations[kind === "video" ? "dune" : "bloom"]));
                   setSaved(false);
                 }}
               >
-                ✦ M’inspirer
+                ✦ {t("M’inspirer")}
               </button>
               <button
                 className="text-link"
@@ -132,27 +133,26 @@ export function Studio({ preview = false }: { preview?: boolean }) {
                   try {
                     localStorage.removeItem("videoeasy-prompt-draft");
                   } catch {}
-                  setNotice("Brouillon effacé.");
+                  setNotice(t("Brouillon effacé."));
                 }}
               >
-                Effacer
+                {t("Effacer")}
               </button>
             </div>
             <label className="field-label" htmlFor="model">
-              Modèle
+              {t("Modèle")}
             </label>
             <select id="model" disabled>
-              <option>Catalogue en cours de validation</option>
+              <option>{t("Catalogue en cours de validation")}</option>
             </select>
             <p className="field-hint">
-              Les modèles seront proposés après validation de leur coût et de
-              leurs conditions d’utilisation.
+              {t("Les modèles seront proposés après validation de leur coût et de leurs conditions d’utilisation.")}
             </p>
-            <label className="field-label">Format de composition</label>
+            <label className="field-label">{t("Format de composition")}</label>
             <div
               className="ratios"
               role="group"
-              aria-label="Format de composition"
+              aria-label={t("Format de composition")}
             >
               {["16:9", "9:16", "1:1"].map((r) => (
                 <button
@@ -167,22 +167,21 @@ export function Studio({ preview = false }: { preview?: boolean }) {
               ))}
             </div>
             <div className="cost-line">
-              <span>Coût de génération</span>
-              <span>Disponible à l’ouverture</span>
+              <span>{t("Coût de génération")}</span>
+              <span>{t("Disponible à l’ouverture")}</span>
             </div>
             <button className="button primary full" disabled>
-              Génération bientôt disponible <span>✦</span>
+              {t("Génération bientôt disponible")} <span>✦</span>
             </button>
             <button
               className="button secondary full"
               disabled={!prompt.trim() || saved}
               onClick={save}
             >
-              {saved ? "Brouillon enregistré" : "Enregistrer mon brouillon"}
+              {saved ? t("Brouillon enregistré") : t("Enregistrer mon brouillon")}
             </button>
             <p className="field-hint">
-              Le brouillon reste sur cet appareil. Aucune génération ni
-              consommation de crédits dans cet aperçu.
+              {t("Le brouillon reste sur cet appareil. Aucune génération ni consommation de crédits dans cet aperçu.")}
             </p>
             <p className="notice" role="status">
               {notice}
@@ -201,21 +200,20 @@ export function Studio({ preview = false }: { preview?: boolean }) {
                       ? "/editorial/lake.jpg"
                       : "/editorial/night.jpg"
                   }
-                  alt="Photographie d’inspiration, pas un résultat de génération"
+                  alt={t("Photographie d’inspiration, pas un résultat de génération")}
                 />
-                <span className="preview-badge">ILLUSTRATION · {ratio}</span>
+                <span className="preview-badge">{t("ILLUSTRATION")} · {ratio}</span>
               </div>
             </div>
             <div className="preview-description">
               <span className="outline-star">✦</span>
-              <h2>Une place pour votre imagination.</h2>
+              <h2>{t("Une place pour votre imagination.")}</h2>
               <p>
-                Votre résultat apparaîtra ici une fois la génération disponible.
-                En attendant, préparez votre prochain univers.
+                {t("Votre résultat apparaîtra ici une fois la génération disponible. En attendant, préparez votre prochain univers.")}
               </p>
               {preview && (
                 <Link className="text-link" href="/login">
-                  Me connecter à mon espace →
+                  {t("Me connecter à mon espace")} →
                 </Link>
               )}
             </div>

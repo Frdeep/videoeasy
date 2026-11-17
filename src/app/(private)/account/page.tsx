@@ -5,8 +5,10 @@ import { db } from "@/lib/db";
 import { plans, type Plan } from "@/lib/plans";
 import { AccountActions } from "@/components/account-actions";
 import { Paywall } from "@/components/paywall";
+import { getT } from "@/lib/locale";
 export default async function Account() {
   const user = await requirePageUser();
+  const { t, dl } = await getT();
   let subscription;
   let available = 0;
   let unavailable = false;
@@ -33,45 +35,45 @@ export default async function Account() {
   }
   return (
     <section className="section private-page">
-      <h1>Mon compte.</h1>
+      <h1>{t("Mon compte.")}</h1>
       <p>{user.email}</p>
       {unavailable ? (
         <p role="alert" className="notice">
-          Vos informations de facturation sont momentanément indisponibles.
+          {t("Vos informations de facturation sont momentanément indisponibles.")}
         </p>
       ) : (
         <div className="account-stats">
           <article>
-            <p>Formule</p>
+            <p>{t("Formule")}</p>
             <h2>
-              {plans[subscription?.plan as Plan]?.name ?? "Aucune formule"}
+              {plans[subscription?.plan as Plan]?.name ?? t("Aucune formule")}
             </h2>
             <p>
               {subscription?.status === "active"
-                ? "Actif"
+                ? t("Actif")
                 : subscription
-                  ? "Paiement en attente"
-                  : "Aucun abonnement"}
+                  ? t("Paiement en attente")
+                  : t("Aucun abonnement")}
             </p>
           </article>
           <article>
-            <p>Crédits</p>
-            <h2>{available.toLocaleString("fr-FR")}</h2>
-            <p>Valables ce mois-ci</p>
+            <p>{t("Crédits")}</p>
+            <h2>{available.toLocaleString(dl)}</h2>
+            <p>{t("Valables ce mois-ci")}</p>
           </article>
           <article>
-            <p>Échéance</p>
+            <p>{t("Échéance")}</p>
             <h2>
               {subscription?.period_end
                 ? new Date(
                     Number(subscription.period_end) * 1000,
-                  ).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })
+                  ).toLocaleDateString(dl, { timeZone: "Europe/Paris" })
                 : "—"}
             </h2>
             <p>
               {subscription?.cancel_at || subscription?.cancel_at_period_end
-                ? "Se termine"
-                : "Renouvellement"}
+                ? t("Se termine")
+                : t("Renouvellement")}
             </p>
           </article>
         </div>
@@ -85,10 +87,10 @@ export default async function Account() {
       )}
       <div className="hero-actions">
         <Link className="button primary" href="/studio">
-          Ouvrir le studio →
+          {t("Ouvrir le studio")} →
         </Link>
         <Link className="button secondary" href="/pricing">
-          Voir les formules
+          {t("Voir les formules")}
         </Link>
       </div>
       <ProfileEditor />

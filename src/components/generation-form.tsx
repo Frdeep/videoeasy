@@ -5,6 +5,7 @@ import { Paywall } from "./paywall";
 import { RiseText, Segmented } from "./motion";
 import { genres, starters, type Genre } from "@/lib/showcase";
 import { presets } from "@/lib/presets";
+import { useT } from "./i18n";
 
 type Model = {
   id: string;
@@ -21,6 +22,7 @@ const ratioOf = (m: Model): Ratio =>
   m.name.includes("9:16") ? "9:16" : "16:9";
 
 export function GenerationForm() {
+  const { t, dl, locale } = useT();
   const [models, setModels] = useState<Model[]>([]);
   const [sub, setSub] = useState<Sub | null | undefined>(undefined);
   const [mode, setMode] = useState<(typeof modes)[number]>("Libre");
@@ -40,7 +42,7 @@ export function GenerationForm() {
     const g = q.get("genre");
     if (g && (genres as readonly string[]).includes(g)) {
       setGenre(g as Genre);
-      setPrompt(starters[g as Genre]);
+      setPrompt(t(starters[g as Genre]));
     }
     Promise.all([
       fetch("/api/platform/models").then((r) =>
@@ -59,7 +61,7 @@ export function GenerationForm() {
       })
       .catch(() => {
         setSub(null);
-        setError("Studio indisponible. Réessayez.");
+        setError(t("Studio indisponible. Réessayez."));
       });
   }, []);
 
@@ -92,10 +94,11 @@ export function GenerationForm() {
             prompt: script,
             genre: mode === "Libre" ? genre : preset.genre,
             ratio,
+            lang: locale,
           }),
         });
         const d = await r.json();
-        if (!r.ok) throw new Error(d.error);
+        if (!r.ok) throw new Error(t(d.error ?? ""));
         finalScript = d.prompt;
         setRewritten(d.prompt);
       }
@@ -112,13 +115,13 @@ export function GenerationForm() {
         }),
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
+      if (!r.ok) throw new Error(t(d.error ?? ""));
       location.assign("/gallery");
     } catch (e) {
       setError(
         e instanceof Error && e.message
           ? e.message
-          : "Non confirmé. Réessayez.",
+          : t("Non confirmé. Réessayez."),
       );
       setStep("");
     }
@@ -127,7 +130,7 @@ export function GenerationForm() {
   if (sub === undefined)
     return (
       <div className="page studio-page">
-        <div className="skeleton" aria-busy="true" aria-label="Chargement" />
+        <div className="skeleton" aria-busy="true" aria-label={t("Chargement")} />
       </div>
     );
 
@@ -136,8 +139,8 @@ export function GenerationForm() {
       <div className="page">
         <Paywall
           compact
-          title="Débloquez le studio."
-          subtitle="Choisissez une formule. Créez tout de suite."
+          title={t("Débloquez le studio.")}
+          subtitle={t("Choisissez une formule. Créez tout de suite.")}
         />
         {error && (
           <p className="form-error" role="alert">
@@ -152,7 +155,7 @@ export function GenerationForm() {
       <header className="page-head">
         <RiseText text="Créer." />
         <div className="balance" aria-live="polite">
-          <strong>{balance.toLocaleString("fr-FR")}</strong> crédits
+          <strong>{balance.toLocaleString(dl)}</strong> {t("crédits")}
         </div>
       </header>
 
@@ -171,7 +174,7 @@ export function GenerationForm() {
         {mode === "Libre" ? (
           <div className="mode-pane" key="libre">
             <label className="field-label" htmlFor="generation-prompt">
-              Votre idée
+              {t("Votre idée")}
             </label>
             <textarea
               id="generation-prompt"
@@ -183,9 +186,9 @@ export function GenerationForm() {
                 setPrompt(e.target.value);
                 touch();
               }}
-              placeholder="Ex. : un chat qui fait du skate au coucher du soleil."
+              placeholder={t("Ex. : un chat qui fait du skate au coucher du soleil.")}
             />
-            <div className="chips" role="group" aria-label="Genre">
+            <div className="chips" role="group" aria-label={t("Genre")}>
               {genres.map((g) => (
                 <button
                   type="button"
@@ -196,13 +199,13 @@ export function GenerationForm() {
                     setGenre(g);
                     if (
                       !prompt.trim() ||
-                      Object.values(starters).includes(prompt)
+                      Object.values(starters).some((x) => x === prompt || t(x) === prompt)
                     )
-                      setPrompt(starters[g]);
+                      setPrompt(t(starters[g]));
                     touch();
                   }}
                 >
-                  {g}
+                  {t(g)}
                 </button>
               ))}
             </div>
@@ -224,9 +227,9 @@ export function GenerationForm() {
                     touch();
                   }}
                 >
-                  <small>{p.genre}</small>
-                  <strong>{p.name}</strong>
-                  <span>{p.pitch}</span>
+                  <small>{t(p.genre)}</small>
+                  <strong>{t(p.name)}</strong>
+                  <span>{t(p.pitch)}</span>
                 </button>
               ))}
             </div>
@@ -234,7 +237,7 @@ export function GenerationForm() {
               {preset.fields.map((f) => (
                 <div key={f.key}>
                   <label className="field-label" htmlFor={`f-${f.key}`}>
-                    {f.label}
+                    {t(f.label)}
                   </label>
                   {f.options ? (
                     <div className="chips">
@@ -248,7 +251,7 @@ export function GenerationForm() {
                             touch();
                           }}
                         >
-                          {o}
+                          {t(o)}
                         </button>
                       ))}
                     </div>
@@ -256,7 +259,7 @@ export function GenerationForm() {
                     <input
                       id={`f-${f.key}`}
                       value={values[f.key] ?? ""}
-                      placeholder={f.placeholder}
+                      placeholder={t(f.placeholder)}
                       maxLength={200}
                       onChange={(e) => {
                         setValues({ ...values, [f.key]: e.target.value });
@@ -268,13 +271,13 @@ export function GenerationForm() {
               ))}
             </div>
             <p className="script-preview">
-              <span>Script</span>
+              <span>{t("Script")}</span>
               {script}
             </p>
           </div>
         )}
 
-        <span className="field-label">Format</span>
+        <span className="field-label">{t("Format")}</span>
         <div className="format-choice" role="radiogroup" aria-label="Format">
           {(["9:16", "16:9"] as Ratio[]).map((r) => (
             <button
@@ -313,14 +316,14 @@ export function GenerationForm() {
           />
           <span className="track" aria-hidden />
           <span>
-            <strong>Réécriture automatique</strong>
-            <small>L’IA transforme votre idée en script pro.</small>
+            <strong>{t("Réécriture automatique")}</strong>
+            <small>{t("L’IA transforme votre idée en script pro.")}</small>
           </span>
         </label>
 
         {rewritten && (
           <p className="script-preview rewritten">
-            <span>Script réécrit</span>
+            <span>{t("Script réécrit")}</span>
             {rewritten}
           </p>
         )}
@@ -329,7 +332,7 @@ export function GenerationForm() {
           <div>
             <strong>{ratio} · HD</strong>
             <span>
-              {enough || !model ? "720p · son" : "Crédits insuffisants"}
+              {enough || !model ? t("720p · son") : t("Crédits insuffisants")}
             </span>
           </div>
           <button
@@ -337,10 +340,10 @@ export function GenerationForm() {
             disabled={busy || !enough || script.trim().length < 3}
           >
             {step === "rewrite"
-              ? "Réécriture…"
+              ? t("Réécriture…")
               : step === "send"
-                ? "Lancement…"
-                : "Générer"}
+                ? t("Lancement…")
+                : t("Générer")}
           </button>
         </div>
         {error && (
@@ -349,8 +352,9 @@ export function GenerationForm() {
           </p>
         )}
         <p className="fine-print">
-          Prête en quelques minutes dans <Link href="/gallery">Créations</Link>.
-          Échec = crédits rendus.
+          {t("Prête en quelques minutes dans")}{" "}
+          <Link href="/gallery">{t("Créations")}</Link>.{" "}
+          {t("Échec = crédits rendus.")}
         </p>
       </form>
     </div>

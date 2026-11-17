@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useT } from "./i18n";
 
 export const channels = [
   ["tiktok", "TikTok"],
@@ -31,6 +32,7 @@ export function ScheduleButton({
   note: string | null;
   onSaved: () => void;
 }) {
+  const { t, dl } = useT();
   const [open, setOpen] = useState(false);
   const [when, setWhen] = useState(toLocalInput(scheduledAt));
   const [net, setNet] = useState(channel ?? "tiktok");
@@ -55,14 +57,14 @@ export function ScheduleButton({
               },
         ),
       });
-      if (!r.ok) throw new Error((await r.json()).error);
+      if (!r.ok) throw new Error(t((await r.json()).error ?? ""));
       setOpen(false);
       onSaved();
     } catch (e) {
       setError(
         e instanceof Error && e.message
           ? e.message
-          : "Enregistrement impossible.",
+          : t("Enregistrement impossible."),
       );
     } finally {
       setBusy(false);
@@ -77,18 +79,18 @@ export function ScheduleButton({
           <path d="M3 10h18M8 3v4M16 3v4" />
         </svg>
         {scheduledAt
-          ? new Date(scheduledAt).toLocaleString("fr-FR", {
+          ? new Date(scheduledAt).toLocaleString(dl, {
               dateStyle: "medium",
               timeStyle: "short",
             })
-          : "Planifier"}
+          : t("Planifier")}
       </button>
     );
 
   return (
     <div className="schedule-panel">
       <label className="field-label" htmlFor={`when-${jobId}`}>
-        Date de publication
+        {t("Date de publication")}
       </label>
       <input
         id={`when-${jobId}`}
@@ -104,14 +106,14 @@ export function ScheduleButton({
             className={v === net ? "chip on" : "chip"}
             onClick={() => setNet(v)}
           >
-            {l}
+            {t(l)}
           </button>
         ))}
       </div>
       <input
         value={text}
         maxLength={280}
-        placeholder="Note (légende, hashtags…)"
+        placeholder={t("Note (légende, hashtags…)")}
         onChange={(e) => setText(e.target.value)}
       />
       {error && <p className="form-error">{error}</p>}
@@ -121,7 +123,7 @@ export function ScheduleButton({
           disabled={busy || !when}
           onClick={() => save()}
         >
-          {busy ? "…" : "Enregistrer"}
+          {busy ? "…" : t("Enregistrer")}
         </button>
         {scheduledAt && (
           <button
@@ -129,7 +131,7 @@ export function ScheduleButton({
             disabled={busy}
             onClick={() => save(true)}
           >
-            Retirer
+            {t("Retirer")}
           </button>
         )}
         <button
@@ -137,7 +139,7 @@ export function ScheduleButton({
           type="button"
           onClick={() => setOpen(false)}
         >
-          Annuler
+          {t("Annuler")}
         </button>
       </div>
     </div>

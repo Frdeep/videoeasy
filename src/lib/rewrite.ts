@@ -11,7 +11,7 @@ export const DAILY_LIMIT = 40;
 
 const SYSTEM = `Tu réécris des idées de vidéo en prompts pour un modèle texte-vers-vidéo (5 secondes, un seul plan, avec le son).
 Règles :
-- Réponds UNIQUEMENT par le prompt final, en français, sans titre, guillemets ni explication.
+- Réponds UNIQUEMENT par le prompt final, dans la langue demandée, sans titre, guillemets ni explication.
 - 1 à 3 phrases, 70 mots maximum.
 - Précise : sujet et action, cadre et mouvement de caméra, lumière, ambiance, et le son si utile.
 - Respecte l'intention et le genre demandés. N'invente ni marque ni personne réelle.
@@ -19,7 +19,7 @@ Règles :
 
 export async function rewriteScript(
   userId: string,
-  input: { prompt: string; genre: string; ratio: string },
+  input: { prompt: string; genre: string; ratio: string; lang?: "fr" | "en" },
 ) {
   const {
     rows: [{ n }],
@@ -52,7 +52,7 @@ export async function rewriteScript(
         messages: [
           {
             role: "user",
-            content: `Genre : ${input.genre}\nFormat : ${input.ratio}\nIdée : ${input.prompt}`,
+            content: `Langue de réponse : ${input.lang === "en" ? "anglais" : "français"}\nGenre : ${input.genre}\nFormat : ${input.ratio}\nIdée : ${input.prompt}`,
           },
         ],
       }),

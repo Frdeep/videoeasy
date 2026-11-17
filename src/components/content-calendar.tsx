@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { RiseText } from "./motion";
 import { channels } from "./schedule-button";
+import { useT } from "./i18n";
+import { translate, type Locale } from "@/lib/i18n";
 
 type Job = {
   id: string;
@@ -17,13 +19,15 @@ const days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 const label = (c: string | null) => channels.find(([v]) => v === c)?.[1] ?? "";
 
-function googleLink(j: Job) {
+function googleLink(j: Job, locale: Locale) {
   const start = new Date(j.scheduled_at!);
   const end = new Date(start.getTime() + 30 * 60000);
   const f = (d: Date) => d.toISOString().replace(/[-:]|\.\d{3}/g, "");
   const p = new URLSearchParams({
     action: "TEMPLATE",
-    text: `Publier ma vidéo${j.schedule_channel ? ` sur ${label(j.schedule_channel)}` : ""}`,
+    text: j.schedule_channel
+      ? translate(locale, "Publier ma vidéo sur {c}", { c: translate(locale, label(j.schedule_channel)) })
+      : translate(locale, "Publier ma vidéo"),
     dates: `${f(start)}/${f(end)}`,
     details: [j.schedule_note, j.prompt].filter(Boolean).join("\n\n"),
   });
@@ -31,6 +35,7 @@ function googleLink(j: Job) {
 }
 
 export function ContentCalendar() {
+  const { t, dl, locale } = useT();
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
@@ -85,16 +90,16 @@ export function ContentCalendar() {
       <header className="page-head">
         <RiseText text="Calendrier." />
         <Link className="button primary" href="/gallery">
-          Planifier une vidéo
+          {t("Planifier une vidéo")}
         </Link>
       </header>
 
       <div className="cal-layout">
-        <section className="cal" aria-label="Mois">
+        <section className="cal" aria-label={t("Mois")}>
           <div className="cal-head">
             <button
               className="fan-arrow"
-              aria-label="Mois précédent"
+              aria-label={t("Mois précédent")}
               onClick={() =>
                 setCursor(
                   new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1),
@@ -106,14 +111,14 @@ export function ContentCalendar() {
               </svg>
             </button>
             <h2>
-              {cursor.toLocaleDateString("fr-FR", {
+              {cursor.toLocaleDateString(dl, {
                 month: "long",
                 year: "numeric",
               })}
             </h2>
             <button
               className="fan-arrow"
-              aria-label="Mois suivant"
+              aria-label={t("Mois suivant")}
               onClick={() =>
                 setCursor(
                   new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1),
@@ -128,7 +133,7 @@ export function ContentCalendar() {
           <div className="cal-grid">
             {days.map((d) => (
               <span className="cal-dow" key={d}>
-                {d}
+                {t(d)}
               </span>
             ))}
             {cells.map((d) => {
@@ -145,7 +150,7 @@ export function ContentCalendar() {
                     items.length ? "has" : "",
                   ].join(" ")}
                   onClick={() => setSelected(k)}
-                  aria-label={`${d.toLocaleDateString("fr-FR", { dateStyle: "full" })}, ${items.length} vidéo(s)`}
+                  aria-label={`${d.toLocaleDateString(dl, { dateStyle: "full" })}, ${t("{n} vidéo(s)", { n: items.length })}`}
                 >
                   <span>{d.getDate()}</span>
                   {items.slice(0, 3).map((j) => (
@@ -160,12 +165,12 @@ export function ContentCalendar() {
         <aside className="cal-side">
           <h2 className="cap-first">
             {dayJobs.length
-              ? new Date(dayJobs[0].scheduled_at!).toLocaleDateString("fr-FR", {
+              ? new Date(dayJobs[0].scheduled_at!).toLocaleDateString(dl, {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
                 })
-              : "À venir"}
+              : t("À venir")}
           </h2>
           {jobs === null ? (
             <div className="skeleton small" />
@@ -182,22 +187,22 @@ export function ContentCalendar() {
                   />
                   <div>
                     <strong>
-                      {new Date(j.scheduled_at!).toLocaleString("fr-FR", {
+                      {new Date(j.scheduled_at!).toLocaleString(dl, {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}
                     </strong>
                     {j.schedule_channel && (
-                      <span className="tag">{label(j.schedule_channel)}</span>
+                      <span className="tag">{t(label(j.schedule_channel))}</span>
                     )}
                     <p>{j.schedule_note || j.prompt}</p>
                     <a
                       className="text-link"
-                      href={googleLink(j)}
+                      href={googleLink(j, locale)}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Ajouter à Google Agenda
+                      {t("Ajouter à Google Agenda")}
                     </a>
                   </div>
                 </li>
@@ -205,9 +210,9 @@ export function ContentCalendar() {
             </ul>
           ) : (
             <div className="empty-state">
-              <p>Rien de planifié.</p>
+              <p>{t("Rien de planifié.")}</p>
               <Link className="text-link" href="/gallery">
-                Choisir une vidéo
+                {t("Choisir une vidéo")}
               </Link>
             </div>
           )}

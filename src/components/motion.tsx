@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useT } from "./i18n";
 
 const useIsoLayout =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -22,6 +23,7 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
   label: string;
 }) {
+  const { t, locale } = useT();
   const wrap = useRef<HTMLDivElement>(null);
   const [pill, setPill] = useState<{ x: number; w: number } | null>(null);
   useIsoLayout(() => {
@@ -42,9 +44,9 @@ export function Segmented<T extends string>({
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [value]);
+  }, [value, locale]);
   return (
-    <div className="segmented" role="group" aria-label={label} ref={wrap}>
+    <div className="segmented" role="group" aria-label={t(label)} ref={wrap}>
       {pill && (
         <span
           className="segmented-pill"
@@ -61,7 +63,7 @@ export function Segmented<T extends string>({
           aria-pressed={o === value}
           onClick={() => onChange(o)}
         >
-          {o}
+          {t(o)}
         </button>
       ))}
     </div>
@@ -70,12 +72,14 @@ export function Segmented<T extends string>({
 
 /** Words rise one after the other. Re-animates when the text changes. */
 export function RiseText({
-  text,
+  text: raw,
   as: Tag = "h1",
 }: {
   text: string;
   as?: "h1" | "h2" | "p";
 }) {
+  const { t } = useT();
+  const text = t(raw);
   return (
     <Tag className="rise" key={text} aria-label={text}>
       {text.split(" ").map((w, i) => (

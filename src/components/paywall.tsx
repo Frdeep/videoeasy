@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { plans, type Plan } from "@/lib/plans";
 import { Reveal, RiseText } from "./motion";
+import { useT } from "./i18n";
 
 const QUALITY = "Vidéo HD 720p";
 
@@ -14,6 +15,7 @@ export function Paywall({
   subtitle?: string;
   compact?: boolean;
 }) {
+  const { t } = useT();
   const [busy, setBusy] = useState<Plan | "portal" | null>(null);
   const [message, setMessage] = useState("");
   async function open(path: string, key: Plan | "portal", body: object = {}) {
@@ -30,13 +32,13 @@ export function Paywall({
         return;
       }
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      if (!response.ok) throw new Error(t(data.error ?? ""));
       location.assign(data.url);
     } catch (error) {
       setMessage(
         error instanceof Error && error.message
           ? error.message
-          : "Paiement indisponible. Réessayez.",
+          : t("Paiement indisponible. Réessayez."),
       );
       setBusy(null);
     }
@@ -45,7 +47,7 @@ export function Paywall({
     <section className={`paywall${compact ? " compact" : ""}`}>
       <header className="paywall-head">
         <RiseText text={title} />
-        <p>{subtitle}</p>
+        <p>{t(subtitle)}</p>
       </header>
       <div className="plan-grid">
         {(Object.keys(plans) as Plan[]).map((id, i) => {
@@ -60,11 +62,11 @@ export function Paywall({
               <article className={`plan-card${featured ? " featured" : ""}`}>
                 <div className="plan-top">
                   <h2>{plan.name}</h2>
-                  {featured && <span className="plan-flag">Recommandé</span>}
+                  {featured && <span className="plan-flag">{t("Recommandé")}</span>}
                 </div>
                 <p className="plan-price">
                   <strong>{plan.cents / 100}€</strong>
-                  <span>/mois</span>
+                  <span>{t("/mois")}</span>
                 </p>
                 <ul>
                   <li>
@@ -73,9 +75,9 @@ export function Paywall({
                         .toString()
                         .replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f")}
                     </strong>{" "}
-                    crédits / mois
+                    {t("crédits / mois")}
                   </li>
-                  <li>{QUALITY}</li>
+                  <li>{t(QUALITY)}</li>
                 </ul>
                 <button
                   className={`button big ${featured ? "primary" : "outline"}`}
@@ -85,7 +87,7 @@ export function Paywall({
                     open("/api/billing/checkout", id, { plan: id })
                   }
                 >
-                  {busy === id ? "Redirection…" : `Choisir ${plan.name}`}
+                  {busy === id ? t("Redirection…") : t("Choisir {plan}", { plan: plan.name })}
                 </button>
               </article>
             </Reveal>
@@ -93,8 +95,8 @@ export function Paywall({
         })}
       </div>
       <ul className="trust">
-        <li>Paiement sécurisé Stripe</li>
-        <li>Résiliable à tout moment</li>
+        <li>{t("Paiement sécurisé Stripe")}</li>
+        <li>{t("Résiliable à tout moment")}</li>
       </ul>
       {message && (
         <p className="form-error" role="alert">
@@ -104,15 +106,14 @@ export function Paywall({
       {!compact && (
         <>
           <p className="fine-print">
-            Prix TTC. Crédits valables un mois. Génération échouée = crédits
-            rendus.
+            {t("Prix TTC. Crédits valables un mois. Génération échouée = crédits rendus.")}
           </p>
           <button
             className="text-link"
             disabled={busy !== null}
             onClick={() => open("/api/billing/portal", "portal")}
           >
-            Gérer mon abonnement
+            {t("Gérer mon abonnement")}
           </button>
         </>
       )}

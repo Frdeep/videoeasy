@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { callbackOutcome } from "@/lib/auth-callback";
+import { useT } from "./i18n";
 export function AuthCallback() {
+  const { t } = useT();
   const started = useRef(false);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -33,18 +35,17 @@ export function AuthCallback() {
   }, []);
   return (
     <div className="auth-container">
-      <h1>{failed ? "Connexion interrompue" : "Vérification du lien…"}</h1>
+      <h1>{failed ? t("Connexion interrompue") : t("Vérification du lien…")}</h1>
       <p role="status">
         {failed
-          ? "La vérification n’a pas pu aboutir. Tu peux essayer la connexion par mot de passe."
-          : "Merci de patienter pendant la vérification. Aucun nouvel e-mail n’est envoyé."}
+          ? t("La vérification n’a pas pu aboutir. Tu peux essayer la connexion par mot de passe.")
+          : t("Merci de patienter pendant la vérification. Aucun nouvel e-mail n’est envoyé.")}
       </p>
       <Link className="text-link" href="/login">
-        Me connecter avec mon mot de passe
+        {t("Me connecter avec mon mot de passe")}
       </Link>
       <noscript>
-        Active JavaScript pour terminer la connexion depuis ce lien, ou utilise
-        la connexion par mot de passe.
+        {t("Active JavaScript pour terminer la connexion depuis ce lien, ou utilise la connexion par mot de passe.")}
       </noscript>
     </div>
   );

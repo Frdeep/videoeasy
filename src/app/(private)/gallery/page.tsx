@@ -1,8 +1,10 @@
 import { JobsGallery } from "@/components/jobs-gallery";
-export default function Gallery() {
+import { getT } from "@/lib/locale";
+export default async function Gallery() {
+  const { t } = await getT();
   return (
     <section className="section private-page">
-      <h1>Créations.</h1>
+      <h1>{t("Créations.")}</h1>
 
       <JobsGallery />
     </section>

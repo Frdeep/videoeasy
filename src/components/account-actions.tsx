@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { useT } from "./i18n";
 export function AccountActions() {
+  const { t } = useT();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   async function act(path: string) {
@@ -13,10 +15,10 @@ export function AccountActions() {
         body: "{}",
       });
       const data = await r.json();
-      if (!r.ok) throw new Error(data.error ?? "Service indisponible.");
+      if (!r.ok) throw new Error(t(data.error ?? "Service indisponible."));
       location.assign(data.url ?? "/");
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Service indisponible.");
+      setMessage(e instanceof Error ? e.message : t("Service indisponible."));
       setBusy(false);
     }
   }
@@ -27,14 +29,14 @@ export function AccountActions() {
         className="text-link"
         onClick={() => act("/api/billing/portal")}
       >
-        Factures et moyen de paiement →
+        {t("Factures et moyen de paiement")} →
       </button>
       <button
         disabled={busy}
         className="text-link"
         onClick={() => act("/auth/signout")}
       >
-        Me déconnecter
+        {t("Me déconnecter")}
       </button>
       <p role="alert">{message}</p>
     </div>

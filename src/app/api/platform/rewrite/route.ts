@@ -12,6 +12,7 @@ const input = z
     prompt: z.string().trim().min(3).max(2500),
     genre: z.string().trim().max(40),
     ratio: z.enum(["16:9", "9:16"]),
+    lang: z.enum(["fr", "en"]).optional(),
   })
   .strict();
 

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useT } from "@/components/i18n";
 export default function Success() {
+  const { t } = useT();
   const [message, setMessage] = useState(
     "Paiement transmis. Vérification serveur en cours…",
   );
@@ -38,9 +40,9 @@ export default function Success() {
   }, []);
   return (
     <div className="return-page">
-      <h1>Votre abonnement</h1>
-      <p role="status">{message}</p>
-      <a href="/">Retour aux abonnements</a>
+      <h1>{t("Votre abonnement")}</h1>
+      <p role="status">{t(message)}</p>
+      <a href="/">{t("Retour aux abonnements")}</a>
     </div>
   );
 }

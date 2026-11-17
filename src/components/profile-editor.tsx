@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { useT } from "./i18n";
 export function ProfileEditor() {
+  const { t } = useT();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -17,21 +19,21 @@ export function ProfileEditor() {
             body: JSON.stringify({ name: form.get("name") }),
           });
           setMessage(
-            r.ok ? "Profil enregistré." : "Enregistrement impossible.",
+            r.ok ? t("Profil enregistré.") : t("Enregistrement impossible."),
           );
         } catch {
-          setMessage("Service indisponible.");
+          setMessage(t("Service indisponible."));
         } finally {
           setBusy(false);
         }
       }}
     >
       <label>
-        Nom affiché
+        {t("Nom affiché")}
         <input name="name" required maxLength={80} autoComplete="nickname" />
       </label>
       <button disabled={busy} className="button secondary">
-        Enregistrer mon profil
+        {t("Enregistrer mon profil")}
       </button>
       <p role="status">{message}</p>
     </form>

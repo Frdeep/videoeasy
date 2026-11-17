@@ -4,12 +4,14 @@ import Link from "next/link";
 import { genres, showcase, type ShowcaseItem } from "@/lib/showcase";
 import { Reveal, RiseText, Segmented } from "./motion";
 import { useIsMobile, useSnapIndex } from "./use-mobile";
+import { useT } from "./i18n";
 
 const filters = ["Tout", ...genres] as const;
 type Filter = (typeof filters)[number];
 const AUTOPLAY_MS = 3800;
 
 function Media({ item, playing }: { item: ShowcaseItem; playing: boolean }) {
+  const { t } = useT();
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const v = ref.current;
@@ -27,7 +29,7 @@ function Media({ item, playing }: { item: ShowcaseItem; playing: boolean }) {
         loop
         playsInline
         preload="metadata"
-        aria-label={item.title}
+        aria-label={t(item.title)}
       />
     );
   return (
@@ -43,21 +45,22 @@ function Media({ item, playing }: { item: ShowcaseItem; playing: boolean }) {
 
 /** Mobile: edge-to-edge native swipe rail, no frame; only the centred card plays. */
 function Rail({ items }: { items: ShowcaseItem[] }) {
+  const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
   const current = useSnapIndex(ref, "x", [items.length]);
   useEffect(() => {
     ref.current?.scrollTo({ left: 0 });
   }, [items]);
   return (
-    <section className="rail-wrap" aria-label="Exemples de vidéos">
+    <section className="rail-wrap" aria-label={t("Exemples de vidéos")}>
       <div className="rail" ref={ref}>
         {items.map((it, i) => (
           <article key={it.id} className={`rail-card${i === current ? " on" : ""}`}>
             <Media item={it} playing={i === current} />
-            <span className="badge badge-left">{it.genre}</span>
+            <span className="badge badge-left">{t(it.genre)}</span>
             <span className="badge badge-right">{it.format}</span>
             <span className="card-caption">
-              <strong>{it.title}</strong>
+              <strong>{t(it.title)}</strong>
             </span>
           </article>
         ))}
@@ -72,38 +75,39 @@ function Rail({ items }: { items: ShowcaseItem[] }) {
 }
 
 function Bento({ genre }: { genre?: string }) {
+  const { t } = useT();
   return (
-    <section className="bento" aria-label="Raccourcis">
+    <section className="bento" aria-label={t("Raccourcis")}>
       <Link className="tile tile-create" href={genre ? `/studio?genre=${encodeURIComponent(genre)}` : "/studio"}>
-        <span className="tile-kicker">Studio</span>
-        <strong>Créer une vidéo</strong>
-        <span className="tile-sub">Une phrase suffit. HD, avec le son.</span>
+        <span className="tile-kicker">{t("Studio")}</span>
+        <strong>{t("Créer une vidéo")}</strong>
+        <span className="tile-sub">{t("Une phrase suffit. HD, avec le son.")}</span>
         <i className="tile-go" aria-hidden>
           <svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </i>
       </Link>
       <Link className="tile tile-shorts" href="/shorts">
-        <span className="tile-kicker">Shorts</span>
-        <strong>1 vidéo → 10 shorts</strong>
-        <span className="tile-sub">Sous-titrés, recadrés.</span>
+        <span className="tile-kicker">{t("Shorts")}</span>
+        <strong>{t("1 vidéo → 10 shorts")}</strong>
+        <span className="tile-sub">{t("Sous-titrés, recadrés.")}</span>
       </Link>
       <Link className="tile tile-gallery" href="/gallery">
         <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden><path d="M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z" /></svg>
-        <strong>Créations</strong>
+        <strong>{t("Créations")}</strong>
       </Link>
       <Link className="tile tile-cal" href="/calendar">
         <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden><path d="M3 6h18v15H3zM3 10h18M8 3v5M16 3v5" /></svg>
-        <strong>Calendrier</strong>
+        <strong>{t("Calendrier")}</strong>
       </Link>
       <Link className="tile tile-price" href="/pricing">
-        <span className="tile-kicker">Dès 23 € / mois</span>
-        <strong>1 000 crédits</strong>
+        <span className="tile-kicker">{t("Dès 23 € / mois")}</span>
+        <strong>{t("1 000 crédits")}</strong>
       </Link>
       <div className="tile tile-genres">
-        <span className="tile-kicker">Formats qui performent</span>
+        <span className="tile-kicker">{t("Formats qui performent")}</span>
         <div className="chips">
           {genres.map((g) => (
-            <Link key={g} href={`/studio?genre=${encodeURIComponent(g)}`}>{g}</Link>
+            <Link key={g} href={`/studio?genre=${encodeURIComponent(g)}`}>{t(g)}</Link>
           ))}
         </div>
       </div>
@@ -157,18 +161,19 @@ export function MediaFeed({ query = "" }: { query?: string }) {
 
   const item = shown[current];
   const mobile = useIsMobile();
+  const { t } = useT();
 
   if (mobile)
     return (
       <div className="home home-m">
         <section className="hero">
           <RiseText text={query ? `« ${query} »` : "Une idée. Une vidéo."} />
-          <p className="hero-sub">Des vidéos IA prêtes à publier.</p>
+          <p className="hero-sub">{t("Des vidéos IA prêtes à publier.")}</p>
         </section>
-        <nav className="chip-row" aria-label="Genres">
+        <nav className="chip-row" aria-label={t("Genres")}>
           {filters.map((f) => (
             <button key={f} className={f === filter ? "on" : ""} aria-pressed={f === filter} onClick={() => setFilter(f)}>
-              {f}
+              {t(f)}
             </button>
           ))}
         </nav>
@@ -176,8 +181,8 @@ export function MediaFeed({ query = "" }: { query?: string }) {
           <Rail items={shown} />
         ) : (
           <div className="empty-state">
-            <h2>Rien ici.</h2>
-            <Link className="text-link" href="/">Tout voir</Link>
+            <h2>{t("Rien ici.")}</h2>
+            <Link className="text-link" href="/">{t("Tout voir")}</Link>
           </div>
         )}
         <Bento genre={filter === "Tout" ? undefined : filter} />
@@ -189,7 +194,7 @@ export function MediaFeed({ query = "" }: { query?: string }) {
       <section className="hero">
         <RiseText text={query ? `« ${query} »` : "Une idée. Une vidéo."} />
         <p className="hero-sub">
-          Des vidéos IA prêtes à publier. En quelques minutes.
+          {t("Des vidéos IA prêtes à publier. En quelques minutes.")}
         </p>
         <Segmented
           options={filters}
@@ -203,7 +208,7 @@ export function MediaFeed({ query = "" }: { query?: string }) {
         <section
           className={`fan${ready ? " ready" : ""}`}
           aria-roledescription="carrousel"
-          aria-label="Exemples de vidéos"
+          aria-label={t("Exemples de vidéos")}
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onKeyDown={(e) => {
@@ -248,15 +253,15 @@ export function MediaFeed({ query = "" }: { query?: string }) {
                   }
                   data-far={d > 3 ? "" : undefined}
                   tabIndex={d > 2 ? -1 : 0}
-                  aria-label={center ? it.title : `Voir « ${it.title} »`}
+                  aria-label={center ? t(it.title) : t("Voir « {title} »", { title: t(it.title) })}
                   aria-current={center || undefined}
                   onClick={() => !center && setActive(i)}
                 >
                   <Media item={it} playing={center && ready} />
-                  <span className="badge badge-left">{it.genre}</span>
+                  <span className="badge badge-left">{t(it.genre)}</span>
                   <span className="badge badge-right">{it.format}</span>
                   <span className="card-caption">
-                    <strong>{it.title}</strong>
+                    <strong>{t(it.title)}</strong>
                   </span>
                 </button>
               );
@@ -265,7 +270,7 @@ export function MediaFeed({ query = "" }: { query?: string }) {
           <div className="fan-controls">
             <button
               className="fan-arrow"
-              aria-label="Précédente"
+              aria-label={t("Précédente")}
               onClick={() => move(-1)}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
@@ -279,7 +284,7 @@ export function MediaFeed({ query = "" }: { query?: string }) {
             </div>
             <button
               className="fan-arrow"
-              aria-label="Suivante"
+              aria-label={t("Suivante")}
               onClick={() => move(1)}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
@@ -290,9 +295,9 @@ export function MediaFeed({ query = "" }: { query?: string }) {
         </section>
       ) : (
         <div className="empty-state">
-          <h2>Rien ici.</h2>
+          <h2>{t("Rien ici.")}</h2>
           <Link className="text-link" href="/">
-            Tout voir
+            {t("Tout voir")}
           </Link>
         </div>
       )}
@@ -303,36 +308,36 @@ export function MediaFeed({ query = "" }: { query?: string }) {
             className="button primary big"
             href={`/studio?genre=${encodeURIComponent(item.genre)}`}
           >
-            Créer ma vidéo
+            {t("Créer ma vidéo")}
           </Link>
           <Link className="button ghost big" href="/pricing">
-            Tarifs
+            {t("Tarifs")}
           </Link>
         </div>
       )}
 
-      <section className="steps" aria-label="Comment ça marche">
+      <section className="steps" aria-label={t("Comment ça marche")}>
         {[
           ["01", "Écrivez", "Une phrase suffit."],
           ["02", "Générez", "Vidéo HD avec le son."],
           ["03", "Publiez", "Téléchargez. Postez."],
-        ].map(([n, t, d], i) => (
+        ].map(([n, ti, d], i) => (
           <Reveal key={n} delay={i * 110}>
             <article>
               <span>{n}</span>
-              <h2>{t}</h2>
-              <p>{d}</p>
+              <h2>{t(ti)}</h2>
+              <p>{t(d)}</p>
             </article>
           </Reveal>
         ))}
       </section>
 
       <Reveal className="genre-band">
-        <h2>Tous les formats qui performent.</h2>
+        <h2>{t("Tous les formats qui performent.")}</h2>
         <ul>
           {genres.map((g) => (
             <li key={g}>
-              <Link href={`/studio?genre=${encodeURIComponent(g)}`}>{g}</Link>
+              <Link href={`/studio?genre=${encodeURIComponent(g)}`}>{t(g)}</Link>
             </li>
           ))}
         </ul>

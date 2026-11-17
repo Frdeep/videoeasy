@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Reveal, RiseText, Segmented } from "./motion";
 import { useSnapIndex } from "./use-mobile";
+import { useT } from "./i18n";
 
 // Long video -> shorts. Upload goes straight from the browser to private
 // storage (signed URL); the server hands it to the engine and imports the
@@ -23,7 +24,7 @@ const montages = [
 const lengths = ["15 s", "30 s", "60 s", "90 s"] as const;
 const counts = ["3", "5", "10"] as const;
 const ratios = ["9:16", "1:1", "16:9"] as const;
-const sample = "Personne ne te dit ça sur la création de contenu".split(" ");
+const SAMPLE = "Personne ne te dit ça sur la création de contenu";
 const MAX_BYTES = 200 * 1024 * 1024;
 const STEP: Record<string, string> = {
   submitting: "Envoi au moteur",
@@ -54,11 +55,13 @@ type Run = {
 type Quota = { freeUsed: number; freeLimit: number; subscribed: boolean };
 
 function CaptionPreview({ style }: { style: string }) {
+  const { t } = useT();
+  const sample = t(SAMPLE).split(" ");
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % sample.length), 420);
     return () => clearInterval(t);
-  }, []);
+  }, [sample.length]);
   const start = Math.max(0, Math.min(i - 1, sample.length - 3));
   return (
     <div className={`cap cap-${style}`} aria-hidden>
@@ -84,6 +87,7 @@ function ClipViewer({
   start: number;
   onClose: () => void;
 }) {
+  const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
   const current = useSnapIndex(ref, "y");
   const clips = run.clips.filter((c) => c.ready);
@@ -107,7 +111,7 @@ function ClipViewer({
     });
   }, [current]);
   return (
-    <div className="viewer" role="dialog" aria-modal aria-label="Vos shorts">
+    <div className="viewer" role="dialog" aria-modal aria-label={t("Vos shorts")}>
       <div className="viewer-track" ref={ref}>
         {clips.map((c) => (
           <section key={c.index} className="viewer-slide">
@@ -124,13 +128,13 @@ function ClipViewer({
               }
             />
             <div className="viewer-meta">
-              <strong>Short {c.index + 1}</strong>
+              <strong>{t("Short {n}", { n: c.index + 1 })}</strong>
               <p>{c.text}</p>
             </div>
           </section>
         ))}
       </div>
-      <button className="viewer-close" onClick={onClose} aria-label="Fermer">
+      <button className="viewer-close" onClick={onClose} aria-label={t("Fermer")}>
         <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
           <path d="M6 6l12 12M18 6 6 18" />
         </svg>
@@ -143,7 +147,7 @@ function ClipViewer({
           <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
             <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
           </svg>
-          Télécharger
+          {t("Télécharger")}
         </a>
       )}
       <span className="viewer-count">
@@ -154,9 +158,10 @@ function ClipViewer({
 }
 
 function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
+  const { t, dl } = useT();
   const busy = run.status === "processing" || run.status === "importing";
   const ready = run.clips.filter((c) => c.ready);
-  const when = new Date(run.created_at).toLocaleString("fr-FR", {
+  const when = new Date(run.created_at).toLocaleString(dl, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -166,7 +171,8 @@ function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
     <article className={`run run-${run.status}`}>
       <header>
         <strong>
-          {run.options.count} shorts · {run.options.length} s · {run.options.ratio}
+          {t("{n} shorts", { n: run.options.count })} · {run.options.length} s ·{" "}
+          {run.options.ratio}
         </strong>
         <span>{when}</span>
       </header>
@@ -174,15 +180,17 @@ function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
         <div className="run-progress">
           <i />
           <span>
-            {STEP[run.engine_state ?? "queued"] ?? "Traitement"}… quelques
-            minutes.
+            {t(STEP[run.engine_state ?? "queued"] ?? "Traitement")}…{" "}
+            {t("quelques minutes.")}
           </span>
         </div>
       )}
       {run.status === "failed" && (
         <p className="run-error">
-          {ERRORS[run.error_code ?? ""] ??
-            "Le découpage a échoué. Il ne compte pas dans votre quota."}
+          {t(
+            ERRORS[run.error_code ?? ""] ??
+              "Le découpage a échoué. Il ne compte pas dans votre quota.",
+          )}
         </p>
       )}
       {run.status === "succeeded" && (
@@ -200,6 +208,7 @@ function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
 }
 
 export function ShortsStudio() {
+  const { t } = useT();
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState<string>("karaoke");
   const [length, setLength] = useState<(typeof lengths)[number]>("30 s");
@@ -237,8 +246,8 @@ export function ShortsStudio() {
     setError("");
     if (!f) return;
     if (!["video/mp4", "video/quicktime", "video/webm"].includes(f.type))
-      return setError("Format accepté : MP4, MOV ou WebM.");
-    if (f.size > MAX_BYTES) return setError("200 Mo maximum par vidéo.");
+      return setError(t("Format accepté : MP4, MOV ou WebM."));
+    if (f.size > MAX_BYTES) return setError(t("200 Mo maximum par vidéo."));
     setFile(f);
   };
 
@@ -255,7 +264,7 @@ export function ShortsStudio() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) return setSignedOut(true);
-      if (!res.ok) throw new Error(data.error ?? "Envoi impossible.");
+      if (!res.ok) throw new Error(t(data.error ?? "Envoi impossible."));
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", data.uploadUrl);
@@ -263,8 +272,8 @@ export function ShortsStudio() {
         xhr.upload.onprogress = (e) =>
           e.lengthComputable && setProgress(Math.round((e.loaded / e.total) * 100));
         xhr.onload = () =>
-          xhr.status < 300 ? resolve() : reject(new Error("Envoi interrompu. Réessayez."));
-        xhr.onerror = () => reject(new Error("Connexion perdue pendant l’envoi."));
+          xhr.status < 300 ? resolve() : reject(new Error(t("Envoi interrompu. Réessayez.")));
+        xhr.onerror = () => reject(new Error(t("Connexion perdue pendant l’envoi.")));
         xhr.send(file);
       });
       const go = await fetch(`/api/shorts/${id}`, {
@@ -277,7 +286,7 @@ export function ShortsStudio() {
           caption,
         }),
       });
-      if (!go.ok) throw new Error((await go.json().catch(() => ({}))).error ?? "Lancement impossible.");
+      if (!go.ok) throw new Error(t((await go.json().catch(() => ({}))).error ?? "Lancement impossible."));
       setFile(null);
       await refresh();
     } catch (e) {
@@ -295,17 +304,19 @@ export function ShortsStudio() {
       <header className="shorts-hero">
         {freeLeft !== null && (
           <span className="soon-pill">
-            {freeLeft > 0 ? `${freeLeft} découpage${freeLeft > 1 ? "s" : ""} offert${freeLeft > 1 ? "s" : ""}` : "Offre gratuite utilisée"}
+            {freeLeft > 0
+              ? t(freeLeft > 1 ? "{n} découpages offerts" : "{n} découpage offert", { n: freeLeft })
+              : t("Offre gratuite utilisée")}
           </span>
         )}
         <RiseText text="Une vidéo longue. Dix shorts." />
         <p className="hero-sub">
-          L’IA trouve les meilleurs moments, recadre et sous-titre.
+          {t("L’IA trouve les meilleurs moments, recadre et sous-titre.")}
         </p>
       </header>
 
       {runs.length > 0 && (
-        <section className="runs" aria-label="Vos découpages">
+        <section className="runs" aria-label={t("Vos découpages")}>
           {runs.map((r) => (
             <RunCard key={r.id} run={r} onOpen={(n) => setViewer({ run: r, start: n })} />
           ))}
@@ -314,7 +325,7 @@ export function ShortsStudio() {
 
       <div className="shorts-layout">
         <section className="composer">
-          <span className="field-label">Source</span>
+          <span className="field-label">{t("Source")}</span>
           <button
             type="button"
             className={`drop${file ? " has-file" : ""}`}
@@ -331,7 +342,7 @@ export function ShortsStudio() {
             <span>
               {file
                 ? `${file.name} · ${(file.size / 1048576).toFixed(0)} Mo`
-                : "Choisir une vidéo (MP4, MOV, WebM · 200 Mo max)"}
+                : t("Choisir une vidéo (MP4, MOV, WebM · 200 Mo max)")}
             </span>
           </button>
           <input
@@ -342,12 +353,11 @@ export function ShortsStudio() {
             onChange={(e) => pick(e.target.files?.[0])}
           />
           <p className="fine-print">
-            La vidéo doit contenir de la parole. Les liens YouTube ne sont pas
-            pris en charge.
+            {t("La vidéo doit contenir de la parole. Les liens YouTube ne sont pas pris en charge.")}
           </p>
 
-          <span className="field-label">Sous-titres</span>
-          <div className="cap-grid" role="radiogroup" aria-label="Style de sous-titres">
+          <span className="field-label">{t("Sous-titres")}</span>
+          <div className="cap-grid" role="radiogroup" aria-label={t("Style de sous-titres")}>
             {captionStyles.map((c) => (
               <button
                 type="button"
@@ -358,34 +368,34 @@ export function ShortsStudio() {
                 onClick={() => setCaption(c.id)}
               >
                 <CaptionPreview style={c.id} />
-                <strong>{c.name}</strong>
+                <strong>{t(c.name)}</strong>
               </button>
             ))}
           </div>
 
           <span className="field-label">
-            Montage <em className="soon-tag">Bientôt</em>
+            {t("Montage")} <em className="soon-tag">{t("Bientôt")}</em>
           </span>
           <div className="preset-grid" aria-disabled>
             {montages.map((m) => (
               <div key={m.id} className="preset off">
-                <strong>{m.name}</strong>
-                <span>{m.desc}</span>
+                <strong>{t(m.name)}</strong>
+                <span>{t(m.desc)}</span>
               </div>
             ))}
           </div>
 
           <div className="shorts-options">
             <div>
-              <span className="field-label">Durée</span>
+              <span className="field-label">{t("Durée")}</span>
               <Segmented options={lengths} value={length} onChange={setLength} label="Durée" />
             </div>
             <div>
-              <span className="field-label">Clips</span>
+              <span className="field-label">{t("Clips")}</span>
               <Segmented options={counts} value={count} onChange={setCount} label="Nombre de clips" />
             </div>
             <div>
-              <span className="field-label">Format</span>
+              <span className="field-label">{t("Format")}</span>
               <Segmented options={ratios} value={ratio} onChange={setRatio} label="Format" />
             </div>
           </div>
@@ -399,21 +409,21 @@ export function ShortsStudio() {
           <div className="launch">
             <div>
               <strong>
-                {count} shorts · {length}
+                {t("{n} shorts", { n: count })} · {length}
               </strong>
               <span>
                 {progress !== null
-                  ? `Envoi ${progress} %`
-                  : `${ratio} · ${captionStyles.find((c) => c.id === caption)?.name}`}
+                  ? t("Envoi {p} %", { p: progress })
+                  : `${ratio} · ${t(captionStyles.find((c) => c.id === caption)?.name ?? "")}`}
               </span>
             </div>
             {signedOut ? (
               <Link className="button primary big" href="/login">
-                Se connecter
+                {t("Se connecter")}
               </Link>
             ) : blocked ? (
               <Link className="button primary big" href="/pricing">
-                S’abonner
+                {t("S’abonner")}
               </Link>
             ) : (
               <button
@@ -421,7 +431,7 @@ export function ShortsStudio() {
                 disabled={!file || progress !== null || busy}
                 onClick={() => void launch()}
               >
-                {progress !== null ? "Envoi…" : busy ? "En cours…" : "Lancer"}
+                {progress !== null ? t("Envoi…") : busy ? t("En cours…") : t("Lancer")}
               </button>
             )}
           </div>
@@ -430,7 +440,7 @@ export function ShortsStudio() {
         <Reveal className="phone-preview">
           <div className={`phone r-${ratio.replace(":", "x")}`}>
             <div className="phone-screen">
-              <span className="phone-tag">Clip 1 / {count}</span>
+              <span className="phone-tag">{t("Clip 1 / {n}", { n: count })}</span>
               <CaptionPreview style={caption} />
             </div>
           </div>

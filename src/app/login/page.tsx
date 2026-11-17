@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { authenticate, resendConfirmation } from "./actions";
 import { AuthSubmit } from "@/components/auth-submit";
+import { getT } from "@/lib/locale";
 export default async function Login({
   searchParams,
 }: {
   searchParams: Promise<{ sent?: string; error?: string; mode?: string }>;
 }) {
   const params = await searchParams;
+  const { t } = await getT();
   const resend = params.mode === "resend";
   const mode =
     params.mode === "signup"
@@ -19,36 +21,28 @@ export default async function Login({
     <div className="auth-container">
       <h1>
         {sent
-          ? "Vérifie ta boîte mail"
+          ? t("Vérifie ta boîte mail")
           : resend
-            ? "Renvoyer la confirmation"
+            ? t("Renvoyer la confirmation")
             : mode === "signup"
-              ? "Commencez à créer."
-              : "Bon retour."}
+              ? t("Commencez à créer.")
+              : t("Bon retour.")}
       </h1>
       {sent ? (
         <div className="auth-feedback" role="status">
-          <h2>Encore une étape avant de te connecter</h2>
+          <h2>{t("Encore une étape avant de te connecter")}</h2>
           <p>
             {params.sent === "magic"
-              ? "Si cette adresse est éligible, un lien de connexion lui a été envoyé."
-              : "Si cette inscription est éligible, un e-mail de confirmation a été envoyé à l’adresse indiquée."}
+              ? t("Si cette adresse est éligible, un lien de connexion lui a été envoyé.")
+              : t("Si cette inscription est éligible, un e-mail de confirmation a été envoyé à l’adresse indiquée.")}
           </p>
           <ol>
-            <li>Ouvre ta boîte mail.</li>
-            <li>
-              Cherche le message de Supabase / VideoEasy, aussi dans les
-              indésirables.
-            </li>
-            <li>Clique sur le lien le plus récent.</li>
+            <li>{t("Ouvre ta boîte mail.")}</li>
+            <li>{t("Cherche le message de Supabase / VideoEasy, aussi dans les indésirables.")}</li>
+            <li>{t("Clique sur le lien le plus récent.")}</li>
           </ol>
-          <p>
-            Si tu reçois une confirmation d’inscription, confirme d’abord ton
-            adresse puis reviens te connecter. Ne crée pas un deuxième compte.
-          </p>
-          <Link className="button primary" href="/login">
-            Mon adresse est confirmée : me connecter
-          </Link>
+          <p>{t("Si tu reçois une confirmation d’inscription, confirme d’abord ton adresse puis reviens te connecter. Ne crée pas un deuxième compte.")}</p>
+          <Link className="button primary" href="/login">{t("Mon adresse est confirmée : me connecter")}</Link>
         </div>
       ) : (
         <>
@@ -56,45 +50,23 @@ export default async function Login({
             <div className="auth-feedback" role="alert">
               {params.error === "confirmation" ? (
                 <>
-                  <strong>
-                    Ton adresse e-mail n’est pas encore confirmée.
-                  </strong>
-                  <p>
-                    Ouvre le dernier message de confirmation envoyé par Supabase
-                    / VideoEasy, puis clique sur son lien avant de te connecter.
-                    Vérifie aussi tes indésirables.
-                  </p>
+                  <strong>{t("Ton adresse e-mail n’est pas encore confirmée.")}</strong>
+                  <p>{t("Ouvre le dernier message de confirmation envoyé par Supabase / VideoEasy, puis clique sur son lien avant de te connecter. Vérifie aussi tes indésirables.")}</p>
                 </>
               ) : params.error === "expired" ? (
                 <>
-                  <strong>Ce lien a expiré ou a déjà été utilisé.</strong>
-                  <p>
-                    Si ton adresse a déjà été confirmée, connecte-toi avec ton
-                    mot de passe. Sinon, demande un nouveau lien et utilise
-                    uniquement le dernier reçu.
-                  </p>
+                  <strong>{t("Ce lien a expiré ou a déjà été utilisé.")}</strong>
+                  <p>{t("Si ton adresse a déjà été confirmée, connecte-toi avec ton mot de passe. Sinon, demande un nouveau lien et utilise uniquement le dernier reçu.")}</p>
                 </>
               ) : params.error === "callback" || params.error === "session" ? (
                 <>
-                  <strong>
-                    La connexion depuis ce lien n’a pas pu être terminée.
-                  </strong>
-                  <p>
-                    Si tu as déjà confirmé ton adresse, utilise ton mot de
-                    passe. Aucun nouvel e-mail n’est envoyé automatiquement.
-                  </p>
+                  <strong>{t("La connexion depuis ce lien n’a pas pu être terminée.")}</strong>
+                  <p>{t("Si tu as déjà confirmé ton adresse, utilise ton mot de passe. Aucun nouvel e-mail n’est envoyé automatiquement.")}</p>
                 </>
               ) : params.error === "wait" ? (
-                <p>
-                  Une demande vient déjà d’être envoyée. Attends au moins une
-                  minute avant de réessayer et vérifie ta boîte mail.
-                </p>
+                <p>{t("Une demande vient déjà d’être envoyée. Attends au moins une minute avant de réessayer et vérifie ta boîte mail.")}</p>
               ) : (
-                <p>
-                  La connexion ou l’inscription n’a pas abouti. Vérifie les
-                  informations saisies. Si tu viens de créer ton compte,
-                  confirme d’abord ton adresse e-mail.
-                </p>
+                <p>{t("La connexion ou l’inscription n’a pas abouti. Vérifie les informations saisies. Si tu viens de créer ton compte, confirme d’abord ton adresse e-mail.")}</p>
               )}
             </div>
           )}
@@ -104,7 +76,7 @@ export default async function Login({
           >
             <input name="mode" type="hidden" value={mode} />
             <label>
-              E-mail
+              {t("E-mail")}
               <input
                 name="email"
                 type="email"
@@ -116,8 +88,8 @@ export default async function Login({
             {!resend && mode !== "magic" && (
               <label>
                 {mode === "signup"
-                  ? "Mot de passe (12 caractères minimum)"
-                  : "Mot de passe"}
+                  ? t("Mot de passe (12 caractères minimum)")
+                  : t("Mot de passe")}
                 <input
                   name="password"
                   type="password"
@@ -133,12 +105,12 @@ export default async function Login({
             <AuthSubmit
               label={
                 resend
-                  ? "Envoyer un nouveau lien de confirmation"
+                  ? t("Envoyer un nouveau lien de confirmation")
                   : mode === "signup"
-                    ? "Créer mon compte"
+                    ? t("Créer mon compte")
                     : mode === "magic"
-                      ? "Recevoir mon lien"
-                      : "Se connecter"
+                      ? t("Recevoir mon lien")
+                      : t("Se connecter")
               }
             />
           </form>
@@ -148,17 +120,11 @@ export default async function Login({
             params.error === "session") &&
             !resend && (
               <p>
-                <Link className="button secondary" href="/login?mode=resend">
-                  Demander un nouveau lien de confirmation
-                </Link>
+                <Link className="button secondary" href="/login?mode=resend">{t("Demander un nouveau lien de confirmation")}</Link>
               </p>
             )}
           {resend && (
-            <p>
-              Cette demande envoie un e-mail uniquement après un clic sur le
-              bouton. Une fois ton adresse confirmée, utilise la connexion par
-              mot de passe.
-            </p>
+            <p>{t("Cette demande envoie un e-mail uniquement après un clic sur le bouton. Une fois ton adresse confirmée, utilise la connexion par mot de passe.")}</p>
           )}
           <p className="auth-switch">
             <Link
@@ -172,10 +138,10 @@ export default async function Login({
               }
             >
               {resend
-                ? "Me connecter avec mon mot de passe"
+                ? t("Me connecter avec mon mot de passe")
                 : mode === "signup"
-                  ? "J’ai déjà un compte"
-                  : "Créer un compte"}
+                  ? t("J’ai déjà un compte")
+                  : t("Créer un compte")}
             </Link>
           </p>
           <Link
@@ -183,8 +149,8 @@ export default async function Login({
             href={mode === "magic" ? "/login" : "/login?mode=magic"}
           >
             {mode === "magic"
-              ? "Connexion par mot de passe"
-              : "Utiliser un lien de connexion par e-mail"}
+              ? t("Connexion par mot de passe")
+              : t("Utiliser un lien de connexion par e-mail")}
           </Link>
         </>
       )}

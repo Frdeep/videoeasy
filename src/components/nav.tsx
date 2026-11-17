@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { LangSwitch, useT } from "./i18n";
 
 const tabs = [
   ["/", "Accueil"],
@@ -43,6 +44,7 @@ const useIsoLayout =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export function Nav() {
+  const { t } = useT();
   const path = usePathname();
   const router = useRouter();
   const [searching, setSearching] = useState(false);
@@ -70,11 +72,11 @@ export function Nav() {
   return (
     <>
       <div className="topbar">
-        <Link className="brand" href="/" aria-label="VideoEasy — accueil">
+        <Link className="brand" href="/" aria-label={t("VideoEasy — accueil")}>
           <Dots />
           <span>videoeasy</span>
         </Link>
-        <nav className="tabs" aria-label="Navigation principale" ref={tabsRef}>
+        <nav className="tabs" aria-label={t("Navigation principale")} ref={tabsRef}>
           {tabs.map(([href, label]) => (
             <Link
               key={href}
@@ -82,7 +84,7 @@ export function Nav() {
               className={active(href) ? "active" : ""}
               aria-current={active(href) ? "page" : undefined}
             >
-              {label}
+              {t(label)}
             </Link>
           ))}
           {bar && (
@@ -107,7 +109,7 @@ export function Nav() {
             <button
               type="button"
               className="icon-button"
-              aria-label="Rechercher"
+              aria-label={t("Rechercher")}
               onClick={() => setSearching(!searching)}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
@@ -120,8 +122,8 @@ export function Nav() {
               type="search"
               name="q"
               tabIndex={searching ? 0 : -1}
-              aria-label="Rechercher"
-              placeholder="Rechercher"
+              aria-label={t("Rechercher")}
+              placeholder={t("Rechercher")}
               onBlur={(e) => !e.currentTarget.value && setSearching(false)}
               onKeyDown={(e) => e.key === "Escape" && setSearching(false)}
             />
@@ -130,17 +132,18 @@ export function Nav() {
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
               <path d="M12 5v14M5 12h14" />
             </svg>
-            Créer
+            {t("Créer")}
           </Link>
           <Link
             className={`avatar${active("/account") ? " active" : ""}`}
             href="/account"
-            aria-label="Mon compte"
+            aria-label={t("Mon compte")}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
               <path d={icons["/account"]} />
             </svg>
           </Link>
+          <LangSwitch />
         </div>
       </div>
     </>
@@ -152,6 +155,7 @@ export function Nav() {
  * outside the sticky header, otherwise `position: fixed` would be relative
  * to the header. */
 export function BottomNav() {
+  const { t } = useT();
   const path = usePathname();
   const active = (href: string) =>
     href === "/" ? path === "/" : path.startsWith(href);
@@ -180,7 +184,7 @@ export function BottomNav() {
   }, [path]);
 
   return (
-    <nav className="bottom-nav" aria-label="Navigation">
+    <nav className="bottom-nav" aria-label={t("Navigation")}>
       {[
         ["/", "Accueil"],
         ["/shorts", "Shorts"],
@@ -193,12 +197,12 @@ export function BottomNav() {
           href={href}
           className={`${active(href) ? "active" : ""}${href === "/studio" ? " fab" : ""}`}
           aria-current={active(href) ? "page" : undefined}
-          aria-label={label}
+          aria-label={t(label)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
             <path d={href === "/studio" ? "M12 5v14M5 12h14" : icons[href]} />
           </svg>
-          {href !== "/studio" && <span>{label}</span>}
+          {href !== "/studio" && <span>{t(label)}</span>}
         </Link>
       ))}
     </nav>

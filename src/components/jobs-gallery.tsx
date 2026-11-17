@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ScheduleButton } from "./schedule-button";
+import { useT } from "./i18n";
 type Job = {
   id: string;
   prompt: string;
@@ -25,6 +26,7 @@ const progress: Record<string, string> = {
   import_retry: "Enregistrement de la vidéo…",
 };
 export function JobsGallery() {
+  const { t, dl } = useT();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [message, setMessage] = useState("Chargement…");
   const [filter, setFilter] = useState("all");
@@ -37,7 +39,7 @@ export function JobsGallery() {
       setJobs(d.jobs);
       setMessage("");
     } catch {
-      setMessage("Galerie indisponible. Réessayez.");
+      setMessage(t("Galerie indisponible. Réessayez."));
     }
   }
   useEffect(() => {
@@ -46,14 +48,14 @@ export function JobsGallery() {
     return () => clearInterval(timer);
   }, []);
   async function remove(id: string) {
-    if (!confirm("Retirer cette création de votre galerie ?")) return;
+    if (!confirm(t("Retirer cette création de votre galerie ?"))) return;
     setBusy(true);
     try {
       const r = await fetch(`/api/platform/jobs/${id}`, { method: "DELETE" });
       if (!r.ok) throw Error();
       await refresh();
     } catch {
-      setMessage("Suppression impossible. Réessayez.");
+      setMessage(t("Suppression impossible. Réessayez."));
     } finally {
       setBusy(false);
     }
@@ -79,17 +81,17 @@ export function JobsGallery() {
             key={key}
             onClick={() => setFilter(key)}
           >
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>
-      <p role="status">{message}</p>
+      <p role="status">{message === "Chargement…" ? t(message) : message}</p>
       {!message && !jobs.length && (
         <div className="empty-state">
-          <h2>Votre première vidéo vous attend.</h2>
+          <h2>{t("Votre première vidéo vous attend.")}</h2>
 
           <Link className="button primary" href="/studio">
-            Créer une vidéo
+            {t("Créer une vidéo")}
           </Link>
         </div>
       )}
@@ -117,31 +119,31 @@ export function JobsGallery() {
                     src={`/api/platform/jobs/${j.id}/download?view=1`}
                   />
                 ) : j.mock_result ? (
-                  "TEST TECHNIQUE SIMULÉ"
+                  t("TEST TECHNIQUE SIMULÉ")
                 ) : j.status === "running" ? (
-                  (progress[j.provider_state ?? ""] ?? "En cours…")
+                  t(progress[j.provider_state ?? ""] ?? "En cours…")
                 ) : j.status === "uncertain" ? (
-                  "Vérification en cours par l'équipe"
+                  t("Vérification en cours par l'équipe")
                 ) : (
-                  labels[j.status]
+                  t(labels[j.status] ?? "")
                 )}
               </div>
               <h3>{j.prompt}</h3>
               <p>
                 {j.model_id.includes("9x16")
-                  ? "Vertical 9:16"
+                  ? t("Vertical 9:16")
                   : j.model_id.includes("16x9")
-                    ? "Paysage 16:9"
+                    ? t("Paysage 16:9")
                     : j.model_id}
-                {j.status === "failed" ? " · crédits rendus" : ""}
+                {j.status === "failed" ? ` · ${t("crédits rendus")}` : ""}
               </p>
-              <p>{new Date(j.created_at).toLocaleString("fr-FR")}</p>
+              <p>{new Date(j.created_at).toLocaleString(dl)}</p>
               {j.status === "succeeded" && (
                 <a
                   className="text-link"
                   href={`/api/platform/jobs/${j.id}/download`}
                 >
-                  Télécharger
+                  {t("Télécharger")}
                 </a>
               )}
               {j.status === "succeeded" && !j.mock_result && (
@@ -155,7 +157,7 @@ export function JobsGallery() {
               )}
               {["failed", "succeeded"].includes(j.status) && (
                 <button disabled={busy} onClick={() => remove(j.id)}>
-                  Retirer
+                  {t("Retirer")}
                 </button>
               )}
             </article>
