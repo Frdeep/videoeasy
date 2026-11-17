@@ -20,45 +20,76 @@ export type ShowcaseItem = {
   poster?: string;
 };
 
+const CDN =
+  "https://pchdggpprfnyzmcnpigy.supabase.co/storage/v1/object/public/showcase";
+const clip = (n: number) => ({
+  video: `${CDN}/v${n}.mp4`,
+  poster: `${CDN}/v${n}.jpg`,
+});
+
 export const showcase: ShowcaseItem[] = [
   {
-    id: "s1",
-    title: "Sneaker en rotation",
-    genre: "Showcase produit",
-    format: "9:16",
-  },
-  {
-    id: "s2",
-    title: "Avis client face caméra",
+    id: "s7",
+    title: "Sérum en avis face caméra",
     genre: "AI UGC",
     format: "9:16",
+    ...clip(7),
   },
   {
-    id: "s3",
-    title: "Course sous la pluie",
+    id: "s1",
+    title: "Road trip en coccinelle",
+    genre: "Animation",
+    format: "16:9",
+    ...clip(1),
+  },
+  {
+    id: "s4",
+    title: "Matin dans le village",
     genre: "Cinématographique",
     format: "16:9",
-  },
-  { id: "s4", title: "Café du matin", genre: "Réaliste", format: "9:16" },
-  { id: "s5", title: "Mascotte en action", genre: "Animation", format: "16:9" },
-  {
-    id: "s6",
-    title: "Parfum en lévitation",
-    genre: "Showcase produit",
-    format: "9:16",
-  },
-  { id: "s7", title: "Unboxing spontané", genre: "AI UGC", format: "9:16" },
-  {
-    id: "s8",
-    title: "Poursuite de nuit",
-    genre: "Cinématographique",
-    format: "16:9",
+    ...clip(4),
   },
   {
     id: "s9",
-    title: "Marché en plein soleil",
+    title: "Citronnade minute",
+    genre: "Showcase produit",
+    format: "9:16",
+    ...clip(9),
+  },
+  {
+    id: "s2",
+    title: "Podcast animé",
+    genre: "Animation",
+    format: "9:16",
+    ...clip(2),
+  },
+  {
+    id: "s6",
+    title: "Vlog au coucher du soleil",
     genre: "Réaliste",
     format: "16:9",
+    ...clip(6),
+  },
+  {
+    id: "s8",
+    title: "Écouteurs au quotidien",
+    genre: "AI UGC",
+    format: "9:16",
+    ...clip(8),
+  },
+  {
+    id: "s3",
+    title: "La crème et le chat",
+    genre: "Animation",
+    format: "9:16",
+    ...clip(3),
+  },
+  {
+    id: "s5",
+    title: "Ruelle en été",
+    genre: "Réaliste",
+    format: "16:9",
+    ...clip(5),
   },
 ];
 
