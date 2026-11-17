@@ -110,6 +110,6 @@ export const starters: Record<Genre, string> = {
 // Vidéo « Le mot du fondateur » affichée dans le pied de page.
 // Hébergée dans le bucket public Supabase « showcase ».
 export const founderVideo: { src: string; poster: string } = {
-  src: "",
-  poster: "",
+  src: `${CDN}/founder.mp4`,
+  poster: `${CDN}/founder.jpg`,
 };
