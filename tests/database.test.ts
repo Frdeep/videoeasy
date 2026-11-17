@@ -364,7 +364,7 @@ suite(
     it("live events are rejected before writes", async () => {
       const e = event();
       e.livemode = true;
-      await expect(processEvent(e)).rejects.toThrow("Live");
+      await expect(processEvent(e)).rejects.toThrow("mode mismatch");
       expect((await db().query("select * from billing.events")).rowCount).toBe(
         0,
       );
