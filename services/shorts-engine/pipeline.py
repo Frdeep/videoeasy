@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 from captions import Word, build_ass
 
-MAX_BYTES = int(os.environ.get("MAX_SOURCE_BYTES", str(800 * 1024 * 1024)))
+MAX_BYTES = int(os.environ.get("MAX_SOURCE_BYTES", str(4 * 1024 ** 3)))
 MAX_DURATION = float(os.environ.get("MAX_SOURCE_SECONDS", "5400"))  # 90 min
 ALLOWED_HOSTS = {
     h.strip().lower()

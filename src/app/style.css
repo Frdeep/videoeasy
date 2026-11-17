@@ -3347,3 +3347,32 @@ button.drop:active {
     transform: translateY(100%);
   }
 }
+
+/* ---------- Shorts : lien YouTube ---------- */
+.yt-source {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+.yt-source input[type="url"] {
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 2px solid #000;
+  background: var(--soft);
+  font-size: 15px;
+}
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  accent-color: #000;
+  flex: none;
+}

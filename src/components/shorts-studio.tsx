@@ -28,7 +28,9 @@ const counts = ["3", "5", "10"] as const;
 const ratios = ["9:16", "1:1", "16:9"] as const;
 const SAMPLE = "Personne ne te dit ça sur la création de contenu";
 const MAX_BYTES = 200 * 1024 * 1024;
+const sources = ["Fichier", "Lien YouTube"] as const;
 const STEP: Record<string, string> = {
+  fetching: "Téléchargement depuis YouTube",
   submitting: "Envoi au moteur",
   queued: "En file d’attente",
   downloading: "Réception de la vidéo",
@@ -47,7 +49,7 @@ const ERRORS: Record<string, string> = {
 type Clip = { index: number; start: number; end: number; text: string; ready: boolean };
 type Run = {
   id: string;
-  status: "processing" | "importing" | "succeeded" | "failed";
+  status: "fetching" | "processing" | "importing" | "succeeded" | "failed";
   engine_state: string | null;
   options: { count: number; length: number; ratio: string; caption: string };
   clips: Clip[];
@@ -173,7 +175,7 @@ function ClipViewer({
 
 function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
   const { t, dl } = useT();
-  const busy = run.status === "processing" || run.status === "importing";
+  const busy = ["fetching", "processing", "importing"].includes(run.status);
   const ready = run.clips.filter((c) => c.ready);
   const when = new Date(run.created_at).toLocaleString(dl, {
     day: "numeric",
@@ -202,8 +204,12 @@ function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
       {run.status === "failed" && (
         <p className="run-error">
           {t(
-            ERRORS[run.error_code ?? ""] ??
-              "Le découpage a échoué. Il ne compte pas dans votre quota.",
+            run.error_code === "relay_timeout"
+              ? "Le téléchargement YouTube n’a pas pu démarrer. Réessayez plus tard."
+              : run.error_code?.startsWith("youtube:")
+                ? "La vidéo YouTube n’a pas pu être récupérée (privée, trop longue ou indisponible)."
+                : (ERRORS[run.error_code ?? ""] ??
+                  "Le découpage a échoué. Il ne compte pas dans votre quota."),
           )}
         </p>
       )}
@@ -240,6 +246,9 @@ function RunCard({ run, onOpen }: { run: Run; onOpen: (n: number) => void }) {
 export function ShortsStudio() {
   const { t } = useT();
   const [file, setFile] = useState<File | null>(null);
+  const [source, setSource] = useState<(typeof sources)[number]>("Fichier");
+  const [link, setLink] = useState("");
+  const [rights, setRights] = useState(false);
   const [caption, setCaption] = useState<string>("karaoke");
   const [length, setLength] = useState<(typeof lengths)[number]>("30 s");
   const [count, setCount] = useState<(typeof counts)[number]>("5");
@@ -265,7 +274,9 @@ export function ShortsStudio() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
-  const busy = runs.some((r) => r.status === "processing" || r.status === "importing");
+  const busy = runs.some((r) => ["fetching", "processing", "importing"].includes(r.status));
+  const ytOk = /^(https?:\/\/)?((www|m|music)\.)?(youtube\.com\/(watch\?|shorts\/|live\/)|youtu\.be\/)\S+/i.test(link.trim());
+  const ready = source === "Fichier" ? !!file : ytOk && rights;
   useEffect(() => {
     if (!busy) return;
     const t = setInterval(() => void refresh(), 6000);
@@ -281,7 +292,36 @@ export function ShortsStudio() {
     setFile(f);
   };
 
+  const options = () => ({
+    count: Number(count),
+    length: parseInt(length, 10),
+    ratio,
+    caption,
+  });
+
+  const launchLink = async () => {
+    setError("");
+    setProgress(0);
+    try {
+      const r = await fetch("/api/shorts/link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: crypto.randomUUID(), url: link.trim(), rights: true, ...options() }),
+      });
+      if (r.status === 401) return setSignedOut(true);
+      if (!r.ok) throw new Error(t((await r.json().catch(() => ({}))).error ?? "Lancement impossible."));
+      setLink("");
+      setRights(false);
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setProgress(null);
+    }
+  };
+
   const launch = async () => {
+    if (source === "Lien YouTube") return launchLink();
     if (!file || progress !== null) return;
     setError("");
     const id = crypto.randomUUID();
@@ -309,12 +349,7 @@ export function ShortsStudio() {
       const go = await fetch(`/api/shorts/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          count: Number(count),
-          length: parseInt(length, 10),
-          ratio,
-          caption,
-        }),
+        body: JSON.stringify(options()),
       });
       if (!go.ok) throw new Error(t((await go.json().catch(() => ({}))).error ?? "Lancement impossible."));
       setFile(null);
@@ -356,6 +391,27 @@ export function ShortsStudio() {
       <div className="shorts-layout">
         <section className="composer">
           <span className="field-label">{t("Source")}</span>
+          <Segmented options={sources} value={source} onChange={setSource} label="Source" />
+          {source === "Lien YouTube" ? (
+            <div className="yt-source">
+              <input
+                type="url"
+                inputMode="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=…"
+                aria-label={t("Lien YouTube")}
+              />
+              <label className="check">
+                <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} />
+                <span>{t("Je certifie avoir les droits sur cette vidéo (ma chaîne ou une autorisation).")}</span>
+              </label>
+              <p className="fine-print">
+                {t("Vidéo publique ou non répertoriée, 90 min maximum. Le téléchargement peut prendre quelques minutes.")}
+              </p>
+            </div>
+          ) : (
+          <>
           <button
             type="button"
             className={`drop${file ? " has-file" : ""}`}
@@ -382,9 +438,9 @@ export function ShortsStudio() {
             hidden
             onChange={(e) => pick(e.target.files?.[0])}
           />
-          <p className="fine-print">
-            {t("La vidéo doit contenir de la parole. Les liens YouTube ne sont pas pris en charge.")}
-          </p>
+          <p className="fine-print">{t("La vidéo doit contenir de la parole.")}</p>
+          </>
+          )}
 
           <span className="field-label">{t("Sous-titres")}</span>
           <div className="cap-grid" role="radiogroup" aria-label={t("Style de sous-titres")}>
@@ -458,7 +514,7 @@ export function ShortsStudio() {
             ) : (
               <button
                 className="button primary big"
-                disabled={!file || progress !== null || busy}
+                disabled={!ready || progress !== null || busy}
                 onClick={() => void launch()}
               >
                 {progress !== null ? t("Envoi…") : busy ? t("En cours…") : t("Lancer")}

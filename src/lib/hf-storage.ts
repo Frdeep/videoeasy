@@ -78,3 +78,15 @@ export async function hfDelete(prefixedKey: string) {
     .send(new DeleteObjectCommand({ Bucket: bucket(), Key: strip(prefixedKey) }))
     .catch(() => {});
 }
+
+/** Presigned PUT for a trusted uploader (the YouTube relay). 2 h. */
+export async function hfSignedPut(key: string, contentType: string) {
+  return {
+    url: await getSignedUrl(
+      s3(),
+      new PutObjectCommand({ Bucket: bucket(), Key: key, ContentType: contentType }),
+      { expiresIn: 7200 },
+    ),
+    key: HF_PREFIX + key,
+  };
+}

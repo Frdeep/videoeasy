@@ -569,4 +569,16 @@ export const EN: Record<string, string> = {
   "Vos 5 montages gratuits sont utilisés. Abonnez-vous pour continuer.": "Your 5 free edits are used. Subscribe to continue.",
   "Lien expiré ou introuvable.": "Link expired or not found.",
   "Téléchargement…": "Downloading…",
+  Fichier: "File",
+  "Lien YouTube": "YouTube link",
+  "Téléchargement depuis YouTube": "Downloading from YouTube",
+  "Je certifie avoir les droits sur cette vidéo (ma chaîne ou une autorisation).":
+    "I confirm I have the rights to this video (my channel or permission).",
+  "Vidéo publique ou non répertoriée, 90 min maximum. Le téléchargement peut prendre quelques minutes.":
+    "Public or unlisted video, 90 min maximum. The download can take a few minutes.",
+  "La vidéo doit contenir de la parole.": "The video must contain speech.",
+  "Le téléchargement YouTube n’a pas pu démarrer. Réessayez plus tard.": "The YouTube download could not start. Try again later.",
+  "La vidéo YouTube n’a pas pu être récupérée (privée, trop longue ou indisponible).":
+    "The YouTube video could not be fetched (private, too long or unavailable).",
+  "Lien YouTube invalide.": "Invalid YouTube link.",
 };

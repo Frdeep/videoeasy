@@ -3,6 +3,7 @@ import { z } from "zod";
 import { env } from "./config";
 import { db, transaction, withUserLock } from "./db";
 import { HttpError } from "./http";
+import { HF_PREFIX, hfConfigured, hfSignedPut } from "./hf-storage";
 import {
   deleteObject,
   engineReadUrl,
@@ -120,7 +121,7 @@ export async function startUpload(
       rows: [stats],
     } = await c.query<{ active: number; today: number; free: number }>(
       `select
-         count(*) filter (where status in ('processing','importing')
+         count(*) filter (where status in ('fetching','processing','importing')
            or (status='uploading' and created_at > now() - interval '2 hours'))::int as active,
          count(*) filter (where status <> 'uploading' and created_at > now() - interval '1 day')::int as today,
          count(*) filter (where free and status not in ('failed','uploading'))::int as free
@@ -164,10 +165,12 @@ export async function launch(
   );
   if (!row) throw new HttpError(404, "Demande introuvable.");
   if (row.status !== "uploading") return; // idempotent replay
-  const info = await objectInfo(row.source_key);
-  if (!info || info.size <= 0)
-    throw new HttpError(409, "La vidéo n’a pas fini d’être envoyée.");
-  if (info.size > MAX_BYTES) throw new HttpError(413, "Vidéo trop lourde.");
+  if (!row.source_key.startsWith(HF_PREFIX)) {
+    const info = await objectInfo(row.source_key);
+    if (!info || info.size <= 0)
+      throw new HttpError(409, "La vidéo n’a pas fini d’être envoyée.");
+    if (info.size > MAX_BYTES) throw new HttpError(413, "Vidéo trop lourde.");
+  }
 
   const { rowCount } = await db().query(
     "update platform.shorts_jobs set status='processing', options=$3, engine_state='submitting', checked_at=now() where id=$1 and user_id=$2 and status='uploading'",
@@ -203,11 +206,16 @@ async function fail(row: Pick<Row, "id" | "source_key">, code: string) {
     "update platform.shorts_jobs set status='failed', error_code=$2, finished_at=now() where id=$1 and status in ('processing','importing')",
     [row.id, code.slice(0, 80)],
   );
-  await deleteObject(row.source_key);
+  if (row.source_key !== "pending") await deleteObject(row.source_key);
 }
 
 /** Polls the engine for this user's running jobs and imports finished clips. */
 export async function advanceShorts(userId: string) {
+  // YouTube links waiting for the relay too long (Chromebook off) fail, uncounted.
+  await db().query(
+    "update platform.shorts_jobs set status='failed', error_code='relay_timeout', finished_at=now() where user_id=$1 and status='fetching' and created_at < now() - interval '45 minutes'",
+    [userId],
+  );
   const { rows } = await db().query<Row & { engine_state: string }>(
     `select * from platform.shorts_jobs where user_id=$1 and deleted_at is null and (
        (status='processing' and checked_at < now() - make_interval(secs => $2))
@@ -321,4 +329,113 @@ export async function clipKey(userId: string, id: string, index: number) {
     [id, userId],
   );
   return row?.clips.find((c) => c.index === index)?.key ?? null;
+}
+
+// ---------- YouTube links (fetched by the Chromebook relay) ----------
+
+/** Canonical watch URL for youtube.com / youtu.be / shorts links, else null. */
+export function youtubeUrl(raw: string) {
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  const host = u.hostname.toLowerCase().replace(/^(www|m|music)\./, "");
+  let id: string | null = null;
+  if (host === "youtu.be") id = u.pathname.slice(1);
+  else if (host === "youtube.com")
+    id =
+      u.pathname === "/watch"
+        ? u.searchParams.get("v")
+        : (u.pathname.match(/^\/(?:shorts|live|embed)\/([^/]+)/)?.[1] ?? null);
+  return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? `https://www.youtube.com/watch?v=${id}` : null;
+}
+
+export const linkInput = launchInput.extend({
+  id: z.uuid(),
+  url: z.string().trim().max(300),
+  rights: z.literal(true),
+});
+
+export async function startLink(userId: string, input: z.infer<typeof linkInput>) {
+  const url = youtubeUrl(input.url);
+  if (!url) throw new HttpError(400, "Lien YouTube invalide.");
+  const sub = await subscribed(userId);
+  await withUserLock(userId, async (c) => {
+    const { rows: [existing] } = await c.query<{ user_id: string }>(
+      "select user_id from platform.shorts_jobs where id=$1",
+      [input.id],
+    );
+    if (existing) {
+      if (existing.user_id !== userId) throw new HttpError(409, "Cette demande existe déjà.");
+      return;
+    }
+    const { rows: [stats] } = await c.query<{ active: number; today: number; free: number }>(
+      `select
+         count(*) filter (where status in ('fetching','processing','importing')
+           or (status='uploading' and created_at > now() - interval '2 hours'))::int as active,
+         count(*) filter (where status <> 'uploading' and created_at > now() - interval '1 day')::int as today,
+         count(*) filter (where free and status not in ('failed','uploading'))::int as free
+       from platform.shorts_jobs where user_id=$1 and deleted_at is null`,
+      [userId],
+    );
+    if (stats.active > 0)
+      throw new HttpError(409, "Un découpage est déjà en cours. Attendez qu’il se termine.");
+    if (!sub && stats.free >= FREE_RUNS)
+      throw new HttpError(402, "Vos 5 découpages gratuits sont utilisés. Abonnez-vous pour continuer.");
+    if (sub && stats.today >= DAILY_RUNS)
+      throw new HttpError(429, "Limite quotidienne atteinte. Revenez demain.");
+    const { id: _id, url: _url, rights: _r, ...options } = input;
+    await c.query(
+      `insert into platform.shorts_jobs(id,user_id,status,source_key,source_bytes,options,free,source_url,engine_state)
+       values($1,$2,'fetching','pending',1,$3,$4,$5,'fetching')`,
+      [input.id, userId, JSON.stringify(options), !sub, url],
+    );
+  });
+}
+
+/** Relay: claims the oldest YouTube job (20-minute lease) and returns where
+ * to upload the downloaded file. */
+export async function relayClaim() {
+  const { rows: [job] } = await db().query<{ id: string; user_id: string; source_url: string }>(
+    `update platform.shorts_jobs set relay_claimed_at=now()
+     where id = (select id from platform.shorts_jobs where status='fetching'
+                   and (relay_claimed_at is null or relay_claimed_at < now() - interval '20 minutes')
+                 order by created_at limit 1 for update skip locked)
+     returning id,user_id,source_url`,
+  );
+  if (!job) return null;
+  const key = `${job.user_id}/shorts/${job.id}/source.mp4`;
+  if (hfConfigured()) {
+    const put = await hfSignedPut(key, "video/mp4");
+    return { id: job.id, url: job.source_url, upload: put.url, key: put.key, maxBytes: 4 * 1024 ** 3 };
+  }
+  return { id: job.id, url: job.source_url, upload: await signedUploadUrl(key), key, maxBytes: MAX_BYTES };
+}
+
+export async function relayDone(
+  id: string,
+  result: { ok: true; key: string; bytes: number } | { ok: false; error: string },
+) {
+  const { rows: [row] } = await db().query<{ user_id: string; options: z.infer<typeof launchInput> }>(
+    "select user_id,options from platform.shorts_jobs where id=$1 and status='fetching'",
+    [id],
+  );
+  if (!row) return;
+  if (!result.ok) {
+    await db().query(
+      "update platform.shorts_jobs set status='failed', error_code=$2, finished_at=now() where id=$1 and status='fetching'",
+      [id, `youtube: ${result.error}`.slice(0, 80)],
+    );
+    return;
+  }
+  const expected = `${row.user_id}/shorts/${id}/source.mp4`;
+  if (result.key !== expected && result.key !== HF_PREFIX + expected)
+    throw new HttpError(400, "Clé inattendue.");
+  const { rowCount } = await db().query(
+    "update platform.shorts_jobs set status='uploading', source_key=$2, source_bytes=$3 where id=$1 and status='fetching'",
+    [id, result.key, Math.max(1, Math.round(result.bytes))],
+  );
+  if (rowCount) await launch(row.user_id, id, row.options);
 }
