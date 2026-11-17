@@ -161,8 +161,9 @@ export default async function Login({
               mot de passe.
             </p>
           )}
-          <p>
+          <p className="auth-switch">
             <Link
+              className="button outline"
               href={
                 resend
                   ? "/login"

@@ -1,180 +1,204 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-const items = [
-  {
-    image: "lake",
-    tag: "Nature",
-    title: "L’eau, les montagnes et le silence",
-    description: "Un mouvement de caméra lent, une lumière naturelle.",
-    idea: "dune",
-  },
-  {
-    image: "city",
-    tag: "Architecture",
-    title: "La ville comme un décor de cinéma",
-    description:
-      "Construisez une scène autour des lignes et de la perspective.",
-    idea: "orb",
-  },
-  {
-    image: "night",
-    tag: "Cinéma",
-    title: "Une autre façon de regarder la nuit",
-    description: "Imaginez un univers nocturne et ses contrastes.",
-    idea: "orb",
-  },
-  {
-    image: "mountain",
-    tag: "Nature",
-    title: "À hauteur de montagne",
-    description: "Explorez un cadrage vertical pour votre prochaine idée.",
-    idea: "dune",
-  },
-  {
-    image: "stars",
-    tag: "Cinéma",
-    title: "Quand la lumière raconte une histoire",
-    description: "Préparez une palette et une ambiance.",
-    idea: "bloom",
-  },
-  {
-    image: "ocean",
-    tag: "Nature",
-    title: "Un paysage. Mille histoires possibles.",
-    description: "Du premier plan au détail qui change tout.",
-    idea: "dune",
-  },
-];
-export function MediaFeed({ query = "" }: { query?: string }) {
-  const [filter, setFilter] = useState("Tout");
-  const shown = items.filter(
-    (i) =>
-      (filter === "Tout" || i.tag === filter) &&
-      `${i.title} ${i.description} ${i.tag}`
-        .toLocaleLowerCase("fr")
-        .includes(query.toLocaleLowerCase("fr")),
-  );
+import { showcase, type ShowcaseItem } from "@/lib/showcase";
+
+const filters = ["Tout", "Cinéma", "Nature", "Ville", "Portrait"] as const;
+
+function Media({ item, playing }: { item: ShowcaseItem; playing: boolean }) {
+  if (item.video)
+    return (
+      <video
+        src={item.video}
+        poster={item.poster}
+        muted
+        loop
+        playsInline
+        autoPlay={playing}
+        preload="metadata"
+        aria-label={item.title}
+      />
+    );
   return (
-    <div className="video-shell">
-      <aside className="feed-sidebar">
-        <Link className="side-active" href="/">
-          ⌂ <span>Accueil</span>
-        </Link>
-        <Link href="/explore">
-          ▣ <span>Studio découverte</span>
-        </Link>
-        <Link href="/gallery">
-          ▦ <span>Mes créations</span>
-        </Link>
-        <hr />
-        <h3>Votre espace</h3>
-        <Link href="/studio">
-          ＋ <span>Nouvelle création</span>
-        </Link>
-        <Link href="/account">
-          ◉ <span>Mon abonnement</span>
-        </Link>
-        <Link href="/pricing">
-          ◇ <span>Les formules</span>
-        </Link>
-        <div className="sidebar-signin">
-          <p>Vos idées méritent leur espace.</p>
-          <Link href="/login">Se connecter →</Link>
-        </div>
+    <div className="placeholder" aria-hidden>
+      <span className="play">
+        <svg width="22" height="22" viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </span>
+      <span className="soon">Vidéo à venir</span>
+    </div>
+  );
+}
+
+function Card({
+  item,
+  offset,
+  onSelect,
+}: {
+  item: ShowcaseItem;
+  offset: number;
+  onSelect: () => void;
+}) {
+  const center = offset === 0;
+  const d = Math.abs(offset);
+  return (
+    <button
+      type="button"
+      className={`fan-card${center ? " is-center" : ""}`}
+      style={
+        {
+          "--x": offset,
+          "--d": d,
+          zIndex: 20 - d,
+        } as React.CSSProperties
+      }
+      aria-label={center ? item.title : `Afficher « ${item.title} »`}
+      aria-current={center || undefined}
+      data-far={d > 3 ? "" : undefined}
+      tabIndex={d > 2 ? -1 : 0}
+      onClick={onSelect}
+    >
+      <Media item={item} playing={center} />
+      <span className="badge badge-left">{item.tag}</span>
+      <span className="badge badge-right">
+        <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden>
+          <rect x="3" y="5" width="18" height="14" rx="3" />
+          <path d="m10 9 5 3-5 3z" />
+        </svg>
+        Vidéo
+      </span>
+      <span className="card-caption">
+        <strong>{item.title}</strong>
         <small>
-          VideoEasy · Créé par Cisco
-          <br />
-          Bêta privée
+          {item.format} · {item.video ? "Exemple VideoEasy" : "Bientôt"}
         </small>
-      </aside>
-      <div className="feed-content">
-        <div
-          className="feed-filters"
-          role="group"
-          aria-label="Filtrer les inspirations"
-        >
-          {["Tout", "Cinéma", "Nature", "Architecture"].map((f) => (
+      </span>
+    </button>
+  );
+}
+
+export function MediaFeed({ query = "" }: { query?: string }) {
+  const [filter, setFilter] = useState<(typeof filters)[number]>("Tout");
+  const shown = useMemo(
+    () =>
+      showcase.filter(
+        (i) =>
+          (filter === "Tout" || i.tag === filter) &&
+          `${i.title} ${i.tag}`
+            .toLocaleLowerCase("fr")
+            .includes(query.toLocaleLowerCase("fr")),
+      ),
+    [filter, query],
+  );
+  const [active, setActive] = useState(Math.floor(showcase.length / 2));
+  const current = Math.min(active, Math.max(shown.length - 1, 0));
+  const move = (step: number) =>
+    shown.length && setActive((current + step + shown.length) % shown.length);
+
+  return (
+    <div className="home">
+      <section className="hero">
+        <h1>
+          {query
+            ? `Résultats pour « ${query} »`
+            : "Vos idées deviennent des vidéos"}
+        </h1>
+        <div className="segmented" role="group" aria-label="Filtrer la vitrine">
+          {filters.map((f) => (
             <button
-              aria-pressed={filter === f}
-              className={f === filter ? "active" : ""}
-              onClick={() => setFilter(f)}
               key={f}
+              className={f === filter ? "active" : ""}
+              aria-pressed={f === filter}
+              onClick={() => {
+                setFilter(f);
+                setActive(0);
+              }}
             >
               {f}
             </button>
           ))}
         </div>
-        <div className="feed-title">
-          <div>
-            <h1>
-              {query
-                ? `Résultats pour « ${query} »`
-                : "Votre prochaine idée commence ici."}
-            </h1>
-            <p>
-              Des directions visuelles pour préparer votre prochaine création.
-            </p>
+      </section>
+
+      {shown.length ? (
+        <section
+          className="fan"
+          aria-roledescription="carrousel"
+          aria-label="Vitrine VideoEasy"
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") move(1);
+            if (e.key === "ArrowLeft") move(-1);
+          }}
+        >
+          <button
+            className="fan-arrow left"
+            aria-label="Vidéo précédente"
+            onClick={() => move(-1)}
+          >
+            ‹
+          </button>
+          <div className="fan-stage">
+            {shown.map((item, i) => (
+              <Card
+                key={item.id}
+                item={item}
+                offset={i - current}
+                onSelect={() => setActive(i)}
+              />
+            ))}
           </div>
-          <Link href="/studio" className="button primary">
-            Ouvrir le studio →
-          </Link>
-        </div>
-        <div className="feed-section-title">
-          <h2>{filter === "Tout" ? "À explorer" : filter}</h2>
-          <span>Photographies d’inspiration · pas des générations IA</span>
-        </div>
-        <div className="media-grid">
-          {shown.map((item, i) => (
-            <Link
-              className="media-card"
-              href={`/explore?idea=${item.idea}`}
-              key={item.title}
-            >
-              <div className="media-thumb">
-                <img
-                  src={`/editorial/${item.image}.jpg`}
-                  alt={item.title}
-                  style={{ objectPosition: i > 2 ? "70% 60%" : "center" }}
-                />
-                <span className="thumb-label">{item.tag.toUpperCase()}</span>
-                <span className="thumb-action">Explorer →</span>
-              </div>
-              <div className="media-info">
-                <div className="channel-avatar">ve</div>
-                <div>
-                  <h3>{item.title}</h3>
-                  <p>VideoEasy · Inspiration</p>
-                  <p>{item.description}</p>
-                </div>
-                <span className="media-more" aria-hidden>
-                  ⋮
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-        {!shown.length && (
-          <div className="empty-state">
-            <h2>Aucune inspiration trouvée</h2>
-            <p>Essayez « nature », « cinéma » ou « ville ».</p>
-            <Link href="/">Voir toutes les inspirations</Link>
-          </div>
-        )}
-        <section className="feed-banner">
-          <div>
-            <span>VOTRE STUDIO PERSONNEL</span>
-            <h2>De l’idée à votre prochaine création.</h2>
-            <p>
-              Préparez vos prompts, choisissez votre format et retrouvez votre
-              espace privé.
-            </p>
-          </div>
-          <Link href="/explore" className="button primary">
-            Découvrir le studio →
-          </Link>
+          <button
+            className="fan-arrow right"
+            aria-label="Vidéo suivante"
+            onClick={() => move(1)}
+          >
+            ›
+          </button>
         </section>
-      </div>
+      ) : (
+        <div className="empty-state">
+          <h2>Aucune vidéo trouvée</h2>
+          <p>Essayez « nature », « ville » ou « cinéma ».</p>
+          <Link href="/">Voir toute la vitrine</Link>
+        </div>
+      )}
+
+      {shown[current] && (
+        <div className="hero-cta">
+          <Link
+            className="button primary"
+            href={`/studio?idea=${shown[current].idea}`}
+          >
+            Créer une vidéo comme celle-ci
+          </Link>
+          <Link className="button ghost" href="/pricing">
+            Voir les formules
+          </Link>
+        </div>
+      )}
+
+      <section className="steps" aria-label="Comment ça marche">
+        {[
+          ["1", "Décrivez", "Écrivez votre idée en une phrase, en français."],
+          [
+            "2",
+            "Générez",
+            "VideoEasy crée une vidéo de 5 s, en 720p, avec le son.",
+          ],
+          [
+            "3",
+            "Retrouvez",
+            "Votre vidéo arrive dans votre galerie privée, prête à télécharger.",
+          ],
+        ].map(([n, t, d]) => (
+          <article key={n}>
+            <span>{n}</span>
+            <h2>{t}</h2>
+            <p>{d}</p>
+          </article>
+        ))}
+      </section>
     </div>
   );
 }

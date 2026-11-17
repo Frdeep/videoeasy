@@ -4,6 +4,7 @@ import { requirePageUser } from "@/lib/page-user";
 import { db } from "@/lib/db";
 import { plans, type Plan } from "@/lib/plans";
 import { AccountActions } from "@/components/account-actions";
+import { Paywall } from "@/components/paywall";
 export default async function Account() {
   const user = await requirePageUser();
   let subscription;
@@ -77,6 +78,13 @@ export default async function Account() {
             </p>
           </article>
         </div>
+      )}
+      {!unavailable && subscription?.status !== "active" && (
+        <Paywall
+          compact
+          title="Activez votre abonnement"
+          subtitle="Choisissez une formule pour commencer à créer vos vidéos."
+        />
       )}
       <div className="hero-actions">
         <Link className="button primary" href="/studio">

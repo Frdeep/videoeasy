@@ -58,7 +58,7 @@ export function JobsGallery() {
     queued: "En attente",
     running: "En cours",
     succeeded: "Terminée",
-    failed: "Échouée",
+    failed: "Échec · crédits rendus",
     uncertain: "À vérifier",
   };
   return (
@@ -124,7 +124,13 @@ export function JobsGallery() {
               </div>
               <h3>{j.prompt}</h3>
               <p>
-                {j.model_id} · {j.credits} crédits · {labels[j.status]}
+                {j.model_id.includes("9x16")
+                  ? "Vertical 9:16"
+                  : j.model_id.includes("16x9")
+                    ? "Paysage 16:9"
+                    : j.model_id}{" "}
+                · {j.credits} crédits
+                {j.status === "failed" ? " · rendus" : ""}
               </p>
               <p>{new Date(j.created_at).toLocaleString("fr-FR")}</p>
               {j.status === "succeeded" && (
