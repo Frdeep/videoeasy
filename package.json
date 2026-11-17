@@ -11,7 +11,8 @@
     "test:db": "vitest run tests/database.test.ts",
     "reconcile": "node --env-file=.env.local --conditions=react-server --import tsx scripts/reconcile.ts",
     "check:stripe": "node --env-file=.env.local --conditions=react-server --import tsx scripts/check-stripe.ts",
-    "worker:test": "node --env-file=.env.local --conditions=react-server --import tsx scripts/worker.ts"
+    "worker:test": "node --env-file=.env.local --conditions=react-server --import tsx scripts/worker.ts",
+    "test:auth-browser": "node scripts/test-auth-browser.cjs"
   },
   "repository": {
     "type": "git",
@@ -43,6 +44,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "playwright": "^1.65.1",
     "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

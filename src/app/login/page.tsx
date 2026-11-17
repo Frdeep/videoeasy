@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { authenticate } from "./actions";
+import { authenticate, resendConfirmation } from "./actions";
 import { AuthSubmit } from "@/components/auth-submit";
 export default async function Login({
   searchParams,
@@ -7,6 +7,7 @@ export default async function Login({
   searchParams: Promise<{ sent?: string; error?: string; mode?: string }>;
 }) {
   const params = await searchParams;
+  const resend = params.mode === "resend";
   const mode =
     params.mode === "signup"
       ? "signup"
@@ -19,9 +20,11 @@ export default async function Login({
       <h1>
         {sent
           ? "Vérifie ta boîte mail"
-          : mode === "signup"
-            ? "Créer mon compte"
-            : "Connexion"}
+          : resend
+            ? "Renvoyer la confirmation"
+            : mode === "signup"
+              ? "Créer mon compte"
+              : "Connexion"}
       </h1>
       {sent ? (
         <div className="auth-feedback" role="status">
@@ -63,6 +66,25 @@ export default async function Login({
                     Vérifie aussi tes indésirables.
                   </p>
                 </>
+              ) : params.error === "expired" ? (
+                <>
+                  <strong>Ce lien a expiré ou a déjà été utilisé.</strong>
+                  <p>
+                    Si ton adresse a déjà été confirmée, connecte-toi avec ton
+                    mot de passe. Sinon, demande un nouveau lien et utilise
+                    uniquement le dernier reçu.
+                  </p>
+                </>
+              ) : params.error === "callback" || params.error === "session" ? (
+                <>
+                  <strong>
+                    La connexion depuis ce lien n’a pas pu être terminée.
+                  </strong>
+                  <p>
+                    Si tu as déjà confirmé ton adresse, utilise ton mot de
+                    passe. Aucun nouvel e-mail n’est envoyé automatiquement.
+                  </p>
+                </>
               ) : params.error === "wait" ? (
                 <p>
                   Une demande vient déjà d’être envoyée. Attends au moins une
@@ -77,7 +99,10 @@ export default async function Login({
               )}
             </div>
           )}
-          <form action={authenticate}>
+          <form
+            action={resend ? resendConfirmation : authenticate}
+            key={resend ? "resend" : mode}
+          >
             <input name="mode" type="hidden" value={mode} />
             <label>
               E-mail
@@ -89,7 +114,7 @@ export default async function Login({
                 maxLength={254}
               />
             </label>
-            {mode !== "magic" && (
+            {!resend && mode !== "magic" && (
               <label>
                 {mode === "signup"
                   ? "Mot de passe (12 caractères minimum)"
@@ -108,17 +133,49 @@ export default async function Login({
             )}
             <AuthSubmit
               label={
-                mode === "signup"
-                  ? "Créer mon compte"
-                  : mode === "magic"
-                    ? "Recevoir mon lien"
-                    : "Se connecter"
+                resend
+                  ? "Envoyer un nouveau lien de confirmation"
+                  : mode === "signup"
+                    ? "Créer mon compte"
+                    : mode === "magic"
+                      ? "Recevoir mon lien"
+                      : "Se connecter"
               }
             />
           </form>
+          {(params.error === "confirmation" ||
+            params.error === "expired" ||
+            params.error === "callback" ||
+            params.error === "session") &&
+            !resend && (
+              <p>
+                <Link className="button secondary" href="/login?mode=resend">
+                  Demander un nouveau lien de confirmation
+                </Link>
+              </p>
+            )}
+          {resend && (
+            <p>
+              Cette demande envoie un e-mail uniquement après un clic sur le
+              bouton. Une fois ton adresse confirmée, utilise la connexion par
+              mot de passe.
+            </p>
+          )}
           <p>
-            <Link href={mode === "signup" ? "/login" : "/login?mode=signup"}>
-              {mode === "signup" ? "J’ai déjà un compte" : "Créer un compte"}
+            <Link
+              href={
+                resend
+                  ? "/login"
+                  : mode === "signup"
+                    ? "/login"
+                    : "/login?mode=signup"
+              }
+            >
+              {resend
+                ? "Me connecter avec mon mot de passe"
+                : mode === "signup"
+                  ? "J’ai déjà un compte"
+                  : "Créer un compte"}
             </Link>
           </p>
           <Link

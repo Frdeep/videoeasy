@@ -4,6 +4,7 @@ const mock = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
   signInWithOtp: vi.fn(),
   user: vi.fn(),
+  resend: vi.fn(),
 }));
 vi.mock("../src/lib/auth", () => ({
   supabase: async () => ({ auth: mock }),
@@ -14,7 +15,7 @@ vi.mock("next/navigation", () => ({
     throw new Error("REDIRECT " + url);
   },
 }));
-import { authenticate } from "../src/app/login/actions";
+import { authenticate, resendConfirmation } from "../src/app/login/actions";
 import { requirePageUser } from "../src/lib/page-user";
 import { HttpError } from "../src/lib/http";
 function form(mode = "signup", password = "fixture-password-123") {
@@ -86,5 +87,53 @@ describe("auth outcome feedback", () => {
   it("page does not mask a genuine server error", async () => {
     mock.user.mockRejectedValue(new Error("server failure"));
     await expect(requirePageUser()).rejects.toThrow("server failure");
+  });
+});
+
+describe("no confirmation email loop", () => {
+  it("password login never requests signup, OTP or another confirmation, including unconfirmed users", async () => {
+    for (const result of [
+      { data: { session: {} }, error: null },
+      { data: null, error: { code: "email_not_confirmed" } },
+      { data: null, error: { code: "invalid_credentials" } },
+    ]) {
+      mock.signInWithPassword.mockResolvedValue(result);
+      await expect(authenticate(form("password"))).rejects.toThrow("REDIRECT");
+    }
+    expect(mock.signUp).not.toHaveBeenCalled();
+    expect(mock.signInWithOtp).not.toHaveBeenCalled();
+    expect(mock.resend).not.toHaveBeenCalled();
+  });
+  it("resends only through the explicit confirmation action", async () => {
+    mock.resend.mockResolvedValue({ data: {}, error: null });
+    await expect(resendConfirmation(form("resend"))).rejects.toThrow(
+      "/login?sent=confirmation",
+    );
+    expect(mock.resend).toHaveBeenCalledWith({
+      type: "signup",
+      email: "fixture@example.invalid",
+      options: { emailRedirectTo: "http://localhost:3000/auth/callback" },
+    });
+    expect(mock.signUp).not.toHaveBeenCalled();
+    expect(mock.signInWithOtp).not.toHaveBeenCalled();
+  });
+  it("handles the explicit resend rate limit", async () => {
+    mock.resend.mockResolvedValue({
+      data: null,
+      error: { code: "over_email_send_rate_limit" },
+    });
+    await expect(resendConfirmation(form("resend"))).rejects.toThrow(
+      "mode=resend&error=wait",
+    );
+  });
+  it("does not create another account when requesting a magic link", async () => {
+    mock.signInWithOtp.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+    await expect(authenticate(form("magic"))).rejects.toThrow("sent=magic");
+    expect(mock.signInWithOtp.mock.calls[0][0].options.shouldCreateUser).toBe(
+      false,
+    );
   });
 });

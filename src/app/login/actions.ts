@@ -38,7 +38,10 @@ export async function authenticate(form: FormData) {
             })
           : await client.auth.signInWithOtp({
               email: email.data,
-              options: { emailRedirectTo: `${appUrl()}/auth/callback` },
+              options: {
+                emailRedirectTo: `${appUrl()}/auth/callback`,
+                shouldCreateUser: false,
+              },
             });
     if (result.error) {
       if (result.error.code === "email_not_confirmed")
@@ -55,6 +58,35 @@ export async function authenticate(form: FormData) {
     else if (mode === "magic") destination = "/login?sent=magic";
   } catch {
     /* No credentials or raw provider errors in logs or URLs. */
+  }
+  redirect(destination);
+}
+
+// Email confirmation is re-sent only when the person explicitly requests it.
+// Password login never calls this action or the signup/OTP APIs.
+export async function resendConfirmation(form: FormData) {
+  const email = z
+    .email()
+    .max(254)
+    .safeParse(String(form.get("email") ?? "").trim());
+  if (!email.success) redirect("/login?mode=resend&error=invalid");
+  let destination = "/login?sent=confirmation";
+  try {
+    const client = await supabase();
+    const result = await client.auth.resend({
+      type: "signup",
+      email: email.data,
+      options: { emailRedirectTo: `${appUrl()}/auth/callback` },
+    });
+    if (result.error)
+      destination = [
+        "over_email_send_rate_limit",
+        "over_request_rate_limit",
+      ].includes(result.error.code ?? "")
+        ? "/login?mode=resend&error=wait"
+        : "/login?mode=resend&error=invalid";
+  } catch {
+    destination = "/login?mode=resend&error=invalid";
   }
   redirect(destination);
 }
