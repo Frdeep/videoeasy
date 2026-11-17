@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Archivo, Inter } from "next/font/google";
-import { Nav } from "@/components/nav";
+import { BottomNav, Nav } from "@/components/nav";
 import "./style.css";
 
 const display = Archivo({
@@ -33,6 +33,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </header>
           <main id="content">{children}</main>
         </div>
+        <BottomNav />
         <footer className="site-footer">
           <span>videoeasy · Créé par Cisco · Bêta privée</span>
           <a href="/pricing">Formules et conditions de crédits</a>

@@ -1,32 +1,13 @@
 "use client";
 import { useState } from "react";
 import { plans, type Plan } from "@/lib/plans";
+import { Reveal, RiseText } from "./motion";
 
-// Cost of the current video model (5 s, 720p, sound). Used only to translate
-// credits into an understandable number of videos; the server decides the cost.
-const VIDEO_CREDITS = 75;
-
-const perks: Record<Plan, string[]> = {
-  standard: [
-    "Vidéos 5 s en 720p avec le son",
-    "Formats paysage et vertical",
-    "Galerie privée et téléchargement",
-  ],
-  metal: [
-    "Tout Standard",
-    "2 vidéos générées en même temps",
-    "Idéal pour un rythme hebdomadaire",
-  ],
-  gold: [
-    "Tout Metal",
-    "3 vidéos générées en même temps",
-    "Pour publier tous les jours",
-  ],
-};
+const QUALITY = "Vidéo HD 720p";
 
 export function Paywall({
-  title = "Choisissez votre formule",
-  subtitle = "Un abonnement mensuel, des crédits pour créer vos vidéos. Sans engagement.",
+  title = "Choisissez. Créez.",
+  subtitle = "Sans engagement.",
   compact = false,
 }: {
   title?: string;
@@ -55,7 +36,7 @@ export function Paywall({
       setMessage(
         error instanceof Error && error.message
           ? error.message
-          : "Le paiement est momentanément indisponible. Réessayez dans un instant.",
+          : "Paiement indisponible. Réessayez.",
       );
       setBusy(null);
     }
@@ -63,56 +44,57 @@ export function Paywall({
   return (
     <section className={`paywall${compact ? " compact" : ""}`}>
       <header className="paywall-head">
-        <span className="eyebrow">Abonnement VideoEasy</span>
-        <h1>{title}</h1>
+        <RiseText text={title} />
         <p>{subtitle}</p>
       </header>
       <div className="plan-grid">
-        {(Object.keys(plans) as Plan[]).map((id) => {
+        {(Object.keys(plans) as Plan[]).map((id, i) => {
           const plan = plans[id];
           const featured = id === "metal";
-          const videos = Math.floor(plan.credits / VIDEO_CREDITS);
           return (
-            <article
+            <Reveal
               key={id}
-              className={`plan-card${featured ? " featured" : ""}`}
+              delay={i * 120}
+              className={featured ? "plan-slot featured" : "plan-slot"}
             >
-              {featured && <span className="plan-flag">Recommandé</span>}
-              <h2>{plan.name}</h2>
-              <p className="plan-price">
-                <strong>{plan.cents / 100} €</strong>
-                <span>/ mois</span>
-              </p>
-              <p className="plan-videos">
-                Jusqu’à <strong>{videos} vidéos</strong> par mois
-              </p>
-              <p className="plan-credits">
-                {plan.credits.toLocaleString("fr-FR")} crédits · {VIDEO_CREDITS}{" "}
-                crédits par vidéo
-              </p>
-              <ul>
-                {perks[id].map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-              <button
-                className={`button ${featured ? "primary" : "outline"}`}
-                disabled={busy !== null}
-                aria-busy={busy === id}
-                onClick={() => open("/api/billing/checkout", id, { plan: id })}
-              >
-                {busy === id
-                  ? "Ouverture du paiement…"
-                  : `Choisir ${plan.name}`}
-              </button>
-            </article>
+              <article className={`plan-card${featured ? " featured" : ""}`}>
+                <div className="plan-top">
+                  <h2>{plan.name}</h2>
+                  {featured && <span className="plan-flag">Recommandé</span>}
+                </div>
+                <p className="plan-price">
+                  <strong>{plan.cents / 100}€</strong>
+                  <span>/mois</span>
+                </p>
+                <ul>
+                  <li>
+                    <strong>
+                      {plan.credits
+                        .toString()
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f")}
+                    </strong>{" "}
+                    crédits / mois
+                  </li>
+                  <li>{QUALITY}</li>
+                </ul>
+                <button
+                  className={`button big ${featured ? "primary" : "outline"}`}
+                  disabled={busy !== null}
+                  aria-busy={busy === id}
+                  onClick={() =>
+                    open("/api/billing/checkout", id, { plan: id })
+                  }
+                >
+                  {busy === id ? "Redirection…" : `Choisir ${plan.name}`}
+                </button>
+              </article>
+            </Reveal>
           );
         })}
       </div>
       <ul className="trust">
-        <li>Paiement sécurisé par Stripe</li>
-        <li>Résiliable en un clic, effectif en fin de mois</li>
-        <li>Vos vidéos restent privées</li>
+        <li>Paiement sécurisé Stripe</li>
+        <li>Résiliable à tout moment</li>
       </ul>
       {message && (
         <p className="form-error" role="alert">
@@ -122,17 +104,15 @@ export function Paywall({
       {!compact && (
         <>
           <p className="fine-print">
-            Prix TTC, facturés chaque mois. Sans essai gratuit. Les crédits non
-            utilisés expirent à la fin de chaque période mensuelle ; une
-            génération échouée vous est recréditée. Changement de formule
-            indisponible pour l’instant.
+            Prix TTC. Crédits valables un mois. Génération échouée = crédits
+            rendus.
           </p>
           <button
             className="text-link"
             disabled={busy !== null}
             onClick={() => open("/api/billing/portal", "portal")}
           >
-            Déjà abonné ? Factures et gestion de l’abonnement →
+            Gérer mon abonnement
           </button>
         </>
       )}

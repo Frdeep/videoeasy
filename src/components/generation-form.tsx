@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Paywall } from "./paywall";
+import { RiseText, Segmented } from "./motion";
+import { genres, starters, type Genre } from "@/lib/showcase";
 
 type Model = {
   id: string;
@@ -12,33 +14,24 @@ type Model = {
 };
 type Sub = { status: string; plan: string; available_credits: string | number };
 
-const ideas: Record<string, string> = {
-  dune: "Lever de soleil sur une vallée brumeuse, travelling lent vers l’avant, lumière dorée, ambiance calme et cinématographique.",
-  orb: "Rue de ville la nuit sous la pluie, reflets de néons sur le sol mouillé, caméra à l’épaule qui avance doucement.",
-  bloom:
-    "Portrait en gros plan d’une femme qui se retourne vers la caméra, lumière douce de fin de journée, fond flou.",
-};
-
-function formatOf(m: Model) {
-  return m.name.includes("9:16")
-    ? "Vertical 9:16"
-    : m.name.includes("16:9")
-      ? "Paysage 16:9"
-      : m.name;
-}
+const isTall = (m: Model) => m.name.includes("9:16");
 
 export function GenerationForm() {
   const [models, setModels] = useState<Model[]>([]);
   const [sub, setSub] = useState<Sub | null | undefined>(undefined);
   const [model, setModel] = useState("");
+  const [genre, setGenre] = useState<Genre>("Réaliste");
   const [prompt, setPrompt] = useState("");
   const [id, setId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const idea = new URLSearchParams(location.search).get("idea");
-    if (idea && ideas[idea]) setPrompt(ideas[idea]);
+    const g = new URLSearchParams(location.search).get("genre");
+    if (g && (genres as readonly string[]).includes(g)) {
+      setGenre(g as Genre);
+      setPrompt(starters[g as Genre]);
+    }
     Promise.all([
       fetch("/api/platform/models").then((r) =>
         r.ok ? r.json() : { models: [] },
@@ -57,9 +50,7 @@ export function GenerationForm() {
       })
       .catch(() => {
         setSub(null);
-        setError(
-          "Le studio est momentanément indisponible. Réessayez dans un instant.",
-        );
+        setError("Studio indisponible. Réessayez.");
       });
   }, []);
 
@@ -87,7 +78,7 @@ export function GenerationForm() {
       setError(
         e instanceof Error && e.message
           ? e.message
-          : "Demande non confirmée. Réessayez sans modifier votre texte.",
+          : "Non confirmé. Réessayez sans modifier le texte.",
       );
       setBusy(false);
     }
@@ -96,11 +87,7 @@ export function GenerationForm() {
   if (sub === undefined)
     return (
       <div className="page studio-page">
-        <div
-          className="skeleton"
-          aria-busy="true"
-          aria-label="Chargement du studio"
-        />
+        <div className="skeleton" aria-busy="true" aria-label="Chargement" />
       </div>
     );
 
@@ -109,8 +96,8 @@ export function GenerationForm() {
       <div className="page">
         <Paywall
           compact
-          title="Débloquez la création vidéo"
-          subtitle="Choisissez une formule pour lancer vos premières vidéos. Vos crédits sont disponibles dès le paiement confirmé."
+          title="Débloquez le studio."
+          subtitle="Choisissez une formule. Créez tout de suite."
         />
         {error && (
           <p className="form-error" role="alert">
@@ -123,18 +110,28 @@ export function GenerationForm() {
   return (
     <div className="page studio-page">
       <header className="page-head">
-        <div>
-          <span className="eyebrow">Studio</span>
-          <h1>Nouvelle vidéo</h1>
-        </div>
+        <RiseText text="Créer." />
         <div className="balance" aria-live="polite">
-          <strong>{balance.toLocaleString("fr-FR")}</strong> crédits disponibles
+          <strong>{balance.toLocaleString("fr-FR")}</strong> crédits
         </div>
       </header>
 
       <form className="composer" onSubmit={submit}>
+        <span className="field-label">Genre</span>
+        <Segmented
+          options={genres}
+          value={genre}
+          label="Genre"
+          onChange={(g) => {
+            setGenre(g);
+            if (!prompt.trim() || Object.values(starters).includes(prompt))
+              setPrompt(starters[g]);
+            setId("");
+          }}
+        />
+
         <label className="field-label" htmlFor="generation-prompt">
-          1. Décrivez votre vidéo
+          Prompt
         </label>
         <textarea
           id="generation-prompt"
@@ -148,16 +145,14 @@ export function GenerationForm() {
             setPrompt(e.target.value);
             setId("");
           }}
-          placeholder="Ex. : Un phare sous l’orage, vagues qui s’écrasent, caméra en drone qui tourne autour, lumière dramatique."
+          placeholder="Sujet, mouvement de caméra, lumière."
         />
         <div className="hint-row">
-          <span>
-            Conseil : décrivez le sujet, le mouvement de caméra et la lumière.
-          </span>
-          <span>{prompt.length} / 2500</span>
+          <span>Sujet · caméra · lumière</span>
+          <span>{prompt.length}/2500</span>
         </div>
 
-        <span className="field-label">2. Choisissez le format</span>
+        <span className="field-label">Format</span>
         <div className="format-choice" role="radiogroup" aria-label="Format">
           {models.map((m) => (
             <button
@@ -173,42 +168,37 @@ export function GenerationForm() {
               }}
             >
               <span
-                className={`ratio ${m.name.includes("9:16") ? "tall" : "wide"}`}
+                className={`ratio ${isTall(m) ? "tall" : "wide"}`}
                 aria-hidden
               />
-              <strong>{formatOf(m)}</strong>
-              <small>5 s · 720p · son</small>
+              <strong>{isTall(m) ? "9:16" : "16:9"}</strong>
+              <small>{isTall(m) ? "Reels · TikTok" : "YouTube · Web"}</small>
             </button>
           ))}
-          {!models.length && <p>Aucun format disponible pour le moment.</p>}
+          {!models.length && <p>Aucun format disponible.</p>}
         </div>
 
         <div className="launch">
           <div>
             <strong>{selected ? `${selected.credits} crédits` : "—"}</strong>
-            <span>
-              {enough
-                ? `Il vous restera ${(balance - (selected?.credits ?? 0)).toLocaleString("fr-FR")} crédits`
-                : "Crédits insuffisants pour cette vidéo"}
-            </span>
+            <span>{enough ? "HD 720p · son" : "Crédits insuffisants"}</span>
           </div>
           <button
             className="button primary big"
             disabled={busy || !enough || prompt.trim().length < 3}
           >
-            {busy ? "Lancement…" : "Générer la vidéo"}
+            {busy ? "Lancement…" : "Générer"}
           </button>
         </div>
-        <p className="fine-print">
-          La génération prend quelques minutes. Vous pouvez quitter la page : la
-          vidéo arrivera dans <Link href="/gallery">Mes créations</Link>. En cas
-          d’échec, vos crédits vous sont rendus.
-        </p>
         {error && (
           <p className="form-error" role="alert">
             {error}
           </p>
         )}
+        <p className="fine-print">
+          Prête en quelques minutes dans{" "}
+          <Link href="/gallery">Mes créations</Link>. Échec = crédits rendus.
+        </p>
       </form>
     </div>
   );

@@ -33,7 +33,7 @@ export function JobsGallery() {
       setJobs(d.jobs);
       setMessage("");
     } catch {
-      setMessage("Votre galerie est momentanément indisponible.");
+      setMessage("Galerie indisponible. Réessayez.");
     }
   }
   useEffect(() => {
@@ -82,10 +82,10 @@ export function JobsGallery() {
       <p role="status">{message}</p>
       {!message && !jobs.length && (
         <div className="empty-state">
-          <h2>Votre collection commence ici.</h2>
-          <p>Vos créations seront visibles uniquement dans votre compte.</p>
+          <h2>Votre première vidéo vous attend.</h2>
+
           <Link className="button primary" href="/studio">
-            Ouvrir le studio
+            Créer une vidéo
           </Link>
         </div>
       )}

@@ -1,20 +1,30 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { showcase, type ShowcaseItem } from "@/lib/showcase";
+import { genres, showcase, type ShowcaseItem } from "@/lib/showcase";
+import { Reveal, RiseText, Segmented } from "./motion";
 
-const filters = ["Tout", "Cinéma", "Nature", "Ville", "Portrait"] as const;
+const filters = ["Tout", ...genres] as const;
+type Filter = (typeof filters)[number];
+const AUTOPLAY_MS = 3800;
 
 function Media({ item, playing }: { item: ShowcaseItem; playing: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    if (playing) void v.play().catch(() => {});
+    else v.pause();
+  }, [playing]);
   if (item.video)
     return (
       <video
+        ref={ref}
         src={item.video}
         poster={item.poster}
         muted
         loop
         playsInline
-        autoPlay={playing}
         preload="metadata"
         aria-label={item.title}
       />
@@ -26,179 +36,209 @@ function Media({ item, playing }: { item: ShowcaseItem; playing: boolean }) {
           <path d="M8 5v14l11-7z" />
         </svg>
       </span>
-      <span className="soon">Vidéo à venir</span>
     </div>
   );
 }
 
-function Card({
-  item,
-  offset,
-  onSelect,
-}: {
-  item: ShowcaseItem;
-  offset: number;
-  onSelect: () => void;
-}) {
-  const center = offset === 0;
-  const d = Math.abs(offset);
-  return (
-    <button
-      type="button"
-      className={`fan-card${center ? " is-center" : ""}`}
-      style={
-        {
-          "--x": offset,
-          "--d": d,
-          zIndex: 20 - d,
-        } as React.CSSProperties
-      }
-      aria-label={center ? item.title : `Afficher « ${item.title} »`}
-      aria-current={center || undefined}
-      data-far={d > 3 ? "" : undefined}
-      tabIndex={d > 2 ? -1 : 0}
-      onClick={onSelect}
-    >
-      <Media item={item} playing={center} />
-      <span className="badge badge-left">{item.tag}</span>
-      <span className="badge badge-right">
-        <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden>
-          <rect x="3" y="5" width="18" height="14" rx="3" />
-          <path d="m10 9 5 3-5 3z" />
-        </svg>
-        Vidéo
-      </span>
-      <span className="card-caption">
-        <strong>{item.title}</strong>
-        <small>
-          {item.format} · {item.video ? "Exemple VideoEasy" : "Bientôt"}
-        </small>
-      </span>
-    </button>
-  );
-}
-
 export function MediaFeed({ query = "" }: { query?: string }) {
-  const [filter, setFilter] = useState<(typeof filters)[number]>("Tout");
+  const [filter, setFilter] = useState<Filter>("Tout");
   const shown = useMemo(
     () =>
       showcase.filter(
         (i) =>
-          (filter === "Tout" || i.tag === filter) &&
-          `${i.title} ${i.tag}`
+          (filter === "Tout" || i.genre === filter) &&
+          `${i.title} ${i.genre}`
             .toLocaleLowerCase("fr")
             .includes(query.toLocaleLowerCase("fr")),
       ),
     [filter, query],
   );
-  const [active, setActive] = useState(Math.floor(showcase.length / 2));
+  const [active, setActive] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const drag = useRef<number | null>(null);
   const current = Math.min(active, Math.max(shown.length - 1, 0));
-  const move = (step: number) =>
-    shown.length && setActive((current + step + shown.length) % shown.length);
+  const count = shown.length;
+
+  const move = useCallback(
+    (step: number) =>
+      setActive((a) =>
+        count ? (Math.min(a, count - 1) + step + count) % count : 0,
+      ),
+    [count],
+  );
+
+  // Fan-out entrance on load and on every genre change.
+  useEffect(() => {
+    setReady(false);
+    setActive(Math.floor(count / 2));
+    const t = setTimeout(() => setReady(true), 80);
+    return () => clearTimeout(t);
+  }, [count, filter]);
+
+  // Wheel autoplay, paused on hover, focus, drag and reduced motion.
+  useEffect(() => {
+    if (paused || count < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => move(1), AUTOPLAY_MS);
+    return () => clearInterval(t);
+  }, [paused, move, count]);
+
+  const item = shown[current];
 
   return (
     <div className="home">
       <section className="hero">
-        <h1>
-          {query
-            ? `Résultats pour « ${query} »`
-            : "Vos idées deviennent des vidéos"}
-        </h1>
-        <div className="segmented" role="group" aria-label="Filtrer la vitrine">
-          {filters.map((f) => (
-            <button
-              key={f}
-              className={f === filter ? "active" : ""}
-              aria-pressed={f === filter}
-              onClick={() => {
-                setFilter(f);
-                setActive(0);
-              }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        <RiseText text={query ? `« ${query} »` : "Une idée. Une vidéo."} />
+        <p className="hero-sub">
+          Des vidéos IA prêtes à publier. En quelques minutes.
+        </p>
+        <Segmented
+          options={filters}
+          value={filter}
+          onChange={setFilter}
+          label="Genres"
+        />
       </section>
 
-      {shown.length ? (
+      {count ? (
         <section
-          className="fan"
+          className={`fan${ready ? " ready" : ""}`}
           aria-roledescription="carrousel"
-          aria-label="Vitrine VideoEasy"
+          aria-label="Exemples de vidéos"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
           onKeyDown={(e) => {
             if (e.key === "ArrowRight") move(1);
             if (e.key === "ArrowLeft") move(-1);
           }}
+          onPointerDown={(e) => {
+            drag.current = e.clientX;
+            setPaused(true);
+          }}
+          onPointerUp={(e) => {
+            const start = drag.current;
+            drag.current = null;
+            setPaused(false);
+            if (start === null) return;
+            const dx = e.clientX - start;
+            if (Math.abs(dx) > 40) move(dx < 0 ? 1 : -1);
+          }}
+          onPointerCancel={() => {
+            drag.current = null;
+            setPaused(false);
+          }}
         >
-          <button
-            className="fan-arrow left"
-            aria-label="Vidéo précédente"
-            onClick={() => move(-1)}
-          >
-            ‹
-          </button>
           <div className="fan-stage">
-            {shown.map((item, i) => (
-              <Card
-                key={item.id}
-                item={item}
-                offset={i - current}
-                onSelect={() => setActive(i)}
-              />
-            ))}
+            {shown.map((it, i) => {
+              let x = i - current;
+              if (x > count / 2) x -= count;
+              if (x < -count / 2) x += count;
+              const d = Math.abs(x);
+              const center = x === 0;
+              return (
+                <button
+                  type="button"
+                  key={it.id}
+                  className={`fan-card${center ? " is-center" : ""}`}
+                  style={
+                    {
+                      "--x": x,
+                      "--d": d,
+                      zIndex: 20 - d,
+                    } as React.CSSProperties
+                  }
+                  data-far={d > 3 ? "" : undefined}
+                  tabIndex={d > 2 ? -1 : 0}
+                  aria-label={center ? it.title : `Voir « ${it.title} »`}
+                  aria-current={center || undefined}
+                  onClick={() => !center && setActive(i)}
+                >
+                  <Media item={it} playing={center && ready} />
+                  <span className="badge badge-left">{it.genre}</span>
+                  <span className="badge badge-right">{it.format}</span>
+                  <span className="card-caption">
+                    <strong>{it.title}</strong>
+                  </span>
+                </button>
+              );
+            })}
           </div>
-          <button
-            className="fan-arrow right"
-            aria-label="Vidéo suivante"
-            onClick={() => move(1)}
-          >
-            ›
-          </button>
+          <div className="fan-controls">
+            <button
+              className="fan-arrow"
+              aria-label="Précédente"
+              onClick={() => move(-1)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+                <path d="m15 5-7 7 7 7" />
+              </svg>
+            </button>
+            <div className="dots" aria-hidden>
+              {shown.map((it, i) => (
+                <span key={it.id} className={i === current ? "on" : ""} />
+              ))}
+            </div>
+            <button
+              className="fan-arrow"
+              aria-label="Suivante"
+              onClick={() => move(1)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+                <path d="m9 5 7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </section>
       ) : (
         <div className="empty-state">
-          <h2>Aucune vidéo trouvée</h2>
-          <p>Essayez « nature », « ville » ou « cinéma ».</p>
-          <Link href="/">Voir toute la vitrine</Link>
+          <h2>Rien ici.</h2>
+          <Link className="text-link" href="/">
+            Tout voir
+          </Link>
         </div>
       )}
 
-      {shown[current] && (
+      {item && (
         <div className="hero-cta">
           <Link
-            className="button primary"
-            href={`/studio?idea=${shown[current].idea}`}
+            className="button primary big"
+            href={`/studio?genre=${encodeURIComponent(item.genre)}`}
           >
-            Créer une vidéo comme celle-ci
+            Créer ma vidéo
           </Link>
-          <Link className="button ghost" href="/pricing">
-            Voir les formules
+          <Link className="button ghost big" href="/pricing">
+            Tarifs
           </Link>
         </div>
       )}
 
       <section className="steps" aria-label="Comment ça marche">
         {[
-          ["1", "Décrivez", "Écrivez votre idée en une phrase, en français."],
-          [
-            "2",
-            "Générez",
-            "VideoEasy crée une vidéo de 5 s, en 720p, avec le son.",
-          ],
-          [
-            "3",
-            "Retrouvez",
-            "Votre vidéo arrive dans votre galerie privée, prête à télécharger.",
-          ],
-        ].map(([n, t, d]) => (
-          <article key={n}>
-            <span>{n}</span>
-            <h2>{t}</h2>
-            <p>{d}</p>
-          </article>
+          ["01", "Écrivez", "Une phrase suffit."],
+          ["02", "Générez", "Vidéo HD avec le son."],
+          ["03", "Publiez", "Téléchargez. Postez."],
+        ].map(([n, t, d], i) => (
+          <Reveal key={n} delay={i * 110}>
+            <article>
+              <span>{n}</span>
+              <h2>{t}</h2>
+              <p>{d}</p>
+            </article>
+          </Reveal>
         ))}
       </section>
+
+      <Reveal className="genre-band">
+        <h2>Tous les formats qui performent.</h2>
+        <ul>
+          {genres.map((g) => (
+            <li key={g}>
+              <Link href={`/studio?genre=${encodeURIComponent(g)}`}>{g}</Link>
+            </li>
+          ))}
+        </ul>
+      </Reveal>
     </div>
   );
 }

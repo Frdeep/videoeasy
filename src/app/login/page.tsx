@@ -23,8 +23,8 @@ export default async function Login({
           : resend
             ? "Renvoyer la confirmation"
             : mode === "signup"
-              ? "Créer mon compte"
-              : "Connexion"}
+              ? "Commencez à créer."
+              : "Bon retour."}
       </h1>
       {sent ? (
         <div className="auth-feedback" role="status">
@@ -52,7 +52,6 @@ export default async function Login({
         </div>
       ) : (
         <>
-          <p>Retrouve tes créations dans ton espace privé.</p>
           {params.error && (
             <div className="auth-feedback" role="alert">
               {params.error === "confirmation" ? (
