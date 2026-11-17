@@ -1,4 +1,6 @@
-# VideoEasy — intégration Stripe en environnement de test
+# VideoEasy — plateforme en environnement de test
+
+Dernière livraison : [plateforme, worker de test et nouveau design](docs/platform-workflows.md). Les documents des premières livraisons ci-dessous restent historiques ; le nouveau guide décrit l’état actuel.
 
 Interface VideoEasy : accueil, aperçu interactif du studio, brouillons locaux, espace client authentifié et galerie en préparation. Voir [la livraison du studio](docs/studio-progress.md) et [l’étude HeliosGen](docs/heliosgen-review.md).
 

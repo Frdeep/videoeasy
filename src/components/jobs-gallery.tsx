@@ -1,0 +1,114 @@
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+type Job = {
+  id: string;
+  prompt: string;
+  status: string;
+  model_id: string;
+  credits: number;
+  created_at: string;
+  mock_result: boolean;
+};
+export function JobsGallery() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [message, setMessage] = useState("Chargement…");
+  const [filter, setFilter] = useState("all");
+  const [busy, setBusy] = useState(false);
+  async function refresh() {
+    try {
+      const r = await fetch("/api/platform/jobs");
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setJobs(d.jobs);
+      setMessage("");
+    } catch {
+      setMessage("Votre galerie est momentanément indisponible.");
+    }
+  }
+  useEffect(() => {
+    void refresh();
+    const timer = setInterval(refresh, 10000);
+    return () => clearInterval(timer);
+  }, []);
+  async function remove(id: string) {
+    if (!confirm("Retirer cette création de votre galerie ?")) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/platform/jobs/${id}`, { method: "DELETE" });
+      if (!r.ok) throw Error();
+      await refresh();
+    } catch {
+      setMessage("Suppression impossible. Réessayez.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  const labels: Record<string, string> = {
+    queued: "En attente",
+    running: "En cours",
+    succeeded: "Terminée",
+    failed: "Échouée",
+    uncertain: "À vérifier",
+  };
+  return (
+    <>
+      <div className="feed-filters">
+        {[
+          ["all", "Tout"],
+          ["succeeded", "Terminées"],
+          ["queued", "En attente"],
+          ["failed", "Échecs"],
+        ].map(([key, label]) => (
+          <button
+            className={filter === key ? "active" : ""}
+            key={key}
+            onClick={() => setFilter(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <p role="status">{message}</p>
+      {!message && !jobs.length && (
+        <div className="empty-state">
+          <h2>Votre collection commence ici.</h2>
+          <p>Vos créations seront visibles uniquement dans votre compte.</p>
+          <Link className="button primary" href="/studio">
+            Ouvrir le studio
+          </Link>
+        </div>
+      )}
+      <div className="media-grid">
+        {jobs
+          .filter((j) => filter === "all" || j.status === filter)
+          .map((j) => (
+            <article className="job-card" key={j.id}>
+              <div className="job-preview">
+                {j.mock_result ? "TEST TECHNIQUE SIMULÉ" : labels[j.status]}
+              </div>
+              <h3>{j.prompt}</h3>
+              <p>
+                {j.model_id} · {j.credits} crédits · {labels[j.status]}
+              </p>
+              <p>{new Date(j.created_at).toLocaleString("fr-FR")}</p>
+              {j.status === "succeeded" && (
+                <a
+                  className="text-link"
+                  href={`/api/platform/jobs/${j.id}/download`}
+                >
+                  Télécharger{" "}
+                  {j.mock_result ? "le fichier de test" : "la création"} →
+                </a>
+              )}
+              {["failed", "succeeded"].includes(j.status) && (
+                <button disabled={busy} onClick={() => remove(j.id)}>
+                  Retirer
+                </button>
+              )}
+            </article>
+          ))}
+      </div>
+    </>
+  );
+}

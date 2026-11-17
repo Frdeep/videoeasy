@@ -1,4 +1,4 @@
-import { Studio } from "@/components/studio";
+import { GenerationForm } from "@/components/generation-form";
 export default function StudioPage() {
-  return <Studio />;
+  return <GenerationForm />;
 }

@@ -1,0 +1,14 @@
+create schema if not exists platform;
+revoke all on schema platform from public,anon,authenticated;
+create table platform.profiles(user_id uuid primary key references auth.users(id),display_name text not null default '',suspended boolean not null default false,created_at timestamptz not null default now());
+create table platform.models(id text primary key,name text not null,kind text not null check(kind in ('video','image')),provider text not null check(provider in ('mock','kie')),enabled boolean not null default false,credits integer not null check(credits>0),allowed_plans text[] not null,updated_at timestamptz not null default now());
+insert into platform.models values('mock-image','Image de test technique','image','mock',false,10,array['standard','metal','gold'],now());
+create table platform.jobs(id uuid primary key,user_id uuid not null references auth.users(id),model_id text not null references platform.models(id),prompt text not null,credits integer not null check(credits>0),provider text not null,status text not null check(status in ('queued','running','succeeded','failed','uncertain')),object_key text,mock_result boolean not null default false,deleted_at timestamptz,created_at timestamptz not null default now(),finished_at timestamptz);
+create index on platform.jobs(user_id,created_at desc);
+create table platform.audit(id bigint generated always as identity primary key,actor uuid not null references auth.users(id),action text not null,target text not null,reason text not null,created_at timestamptz not null default now());
+do $$ declare t text; begin foreach t in array array['profiles','models','jobs','audit'] loop execute format('alter table platform.%I enable row level security',t);execute format('revoke all on platform.%I from public,anon,authenticated',t);end loop;end $$;
+revoke all on all sequences in schema platform from public,anon,authenticated;
+alter table platform.audit add column request_id uuid unique;
+alter table platform.audit add column delta integer;
+alter table billing.credit_movements drop constraint credit_movements_kind_check;
+alter table billing.credit_movements add constraint credit_movements_kind_check check(kind in ('grant','expire','reserve','consume','release','release_expired','admin_adjust'));

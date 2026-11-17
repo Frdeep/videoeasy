@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:db": "vitest run tests/database.test.ts",
     "reconcile": "node --env-file=.env.local --conditions=react-server --import tsx scripts/reconcile.ts",
-    "check:stripe": "node --env-file=.env.local --conditions=react-server --import tsx scripts/check-stripe.ts"
+    "check:stripe": "node --env-file=.env.local --conditions=react-server --import tsx scripts/check-stripe.ts",
+    "worker:test": "node --env-file=.env.local --conditions=react-server --import tsx scripts/worker.ts",
+    "test:auth-browser": "node scripts/test-auth-browser.cjs"
   },
   "repository": {
     "type": "git",
@@ -25,6 +27,8 @@
   },
   "homepage": "https://github.com/Frdeep/videoeasy#readme",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1169.0",
+    "@aws-sdk/s3-request-presigner": "^3.1169.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
     "next": "^16.4.6",
@@ -40,6 +44,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "playwright": "^1.65.1",
     "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
