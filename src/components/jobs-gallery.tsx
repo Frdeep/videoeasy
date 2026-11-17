@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ScheduleButton } from "./schedule-button";
 type Job = {
   id: string;
   prompt: string;
@@ -11,6 +12,9 @@ type Job = {
   mock_result: boolean;
   provider_state: string | null;
   content_type: string | null;
+  scheduled_at: string | null;
+  schedule_channel: string | null;
+  schedule_note: string | null;
 };
 const progress: Record<string, string> = {
   submitting: "Envoi au générateur…",
@@ -33,7 +37,7 @@ export function JobsGallery() {
       setJobs(d.jobs);
       setMessage("");
     } catch {
-      setMessage("Votre galerie est momentanément indisponible.");
+      setMessage("Galerie indisponible. Réessayez.");
     }
   }
   useEffect(() => {
@@ -58,7 +62,7 @@ export function JobsGallery() {
     queued: "En attente",
     running: "En cours",
     succeeded: "Terminée",
-    failed: "Échouée",
+    failed: "Échec · crédits rendus",
     uncertain: "À vérifier",
   };
   return (
@@ -82,10 +86,10 @@ export function JobsGallery() {
       <p role="status">{message}</p>
       {!message && !jobs.length && (
         <div className="empty-state">
-          <h2>Votre collection commence ici.</h2>
-          <p>Vos créations seront visibles uniquement dans votre compte.</p>
+          <h2>Votre première vidéo vous attend.</h2>
+
           <Link className="button primary" href="/studio">
-            Ouvrir le studio
+            Créer une vidéo
           </Link>
         </div>
       )}
@@ -124,7 +128,12 @@ export function JobsGallery() {
               </div>
               <h3>{j.prompt}</h3>
               <p>
-                {j.model_id} · {j.credits} crédits · {labels[j.status]}
+                {j.model_id.includes("9x16")
+                  ? "Vertical 9:16"
+                  : j.model_id.includes("16x9")
+                    ? "Paysage 16:9"
+                    : j.model_id}
+                {j.status === "failed" ? " · crédits rendus" : ""}
               </p>
               <p>{new Date(j.created_at).toLocaleString("fr-FR")}</p>
               {j.status === "succeeded" && (
@@ -132,9 +141,17 @@ export function JobsGallery() {
                   className="text-link"
                   href={`/api/platform/jobs/${j.id}/download`}
                 >
-                  Télécharger{" "}
-                  {j.mock_result ? "le fichier de test" : "la création"} →
+                  Télécharger
                 </a>
+              )}
+              {j.status === "succeeded" && !j.mock_result && (
+                <ScheduleButton
+                  jobId={j.id}
+                  scheduledAt={j.scheduled_at}
+                  channel={j.schedule_channel}
+                  note={j.schedule_note}
+                  onSaved={refresh}
+                />
               )}
               {["failed", "succeeded"].includes(j.status) && (
                 <button disabled={busy} onClick={() => remove(j.id)}>

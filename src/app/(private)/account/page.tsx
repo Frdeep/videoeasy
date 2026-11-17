@@ -4,6 +4,7 @@ import { requirePageUser } from "@/lib/page-user";
 import { db } from "@/lib/db";
 import { plans, type Plan } from "@/lib/plans";
 import { AccountActions } from "@/components/account-actions";
+import { Paywall } from "@/components/paywall";
 export default async function Account() {
   const user = await requirePageUser();
   let subscription;
@@ -32,10 +33,7 @@ export default async function Account() {
   }
   return (
     <section className="section private-page">
-      <p className="eyebrow">BIENVENUE DANS VOTRE ESPACE</p>
-      <h1>
-        À vous de jouer<span className="accent">.</span>
-      </h1>
+      <h1>Mon compte.</h1>
       <p>{user.email}</p>
       {unavailable ? (
         <p role="alert" className="notice">
@@ -44,25 +42,25 @@ export default async function Account() {
       ) : (
         <div className="account-stats">
           <article>
-            <p>Ma formule</p>
+            <p>Formule</p>
             <h2>
               {plans[subscription?.plan as Plan]?.name ?? "Aucune formule"}
             </h2>
             <p>
               {subscription?.status === "active"
-                ? "Abonnement actif"
+                ? "Actif"
                 : subscription
-                  ? "Paiement à vérifier"
-                  : "Choisissez une formule pour commencer."}
+                  ? "Paiement en attente"
+                  : "Aucun abonnement"}
             </p>
           </article>
           <article>
-            <p>Crédits disponibles</p>
+            <p>Crédits</p>
             <h2>{available.toLocaleString("fr-FR")}</h2>
-            <p>Crédits du mois, sans report.</p>
+            <p>Valables ce mois-ci</p>
           </article>
           <article>
-            <p>Prochaine échéance</p>
+            <p>Échéance</p>
             <h2>
               {subscription?.period_end
                 ? new Date(
@@ -72,11 +70,18 @@ export default async function Account() {
             </h2>
             <p>
               {subscription?.cancel_at || subscription?.cancel_at_period_end
-                ? "Annulation programmée"
-                : "Fin de la période courante"}
+                ? "Se termine"
+                : "Renouvellement"}
             </p>
           </article>
         </div>
+      )}
+      {!unavailable && subscription?.status !== "active" && (
+        <Paywall
+          compact
+          title="Passez à la création."
+          subtitle="Choisissez une formule."
+        />
       )}
       <div className="hero-actions">
         <Link className="button primary" href="/studio">
