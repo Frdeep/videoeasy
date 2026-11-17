@@ -3376,3 +3376,22 @@ button.drop:active {
   accent-color: #000;
   flex: none;
 }
+.cap-none {
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.55);
+}
+.cap-none svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.phone-screen .cap-none {
+  display: none;
+}
+@media (min-width: 901px) {
+  .cap-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}

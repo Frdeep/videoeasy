@@ -118,7 +118,7 @@ def health() -> dict:
 
 @app.post("/v1/shorts", dependencies=[Depends(auth)], status_code=202)
 def create(req: ShortsRequest) -> dict:
-    if req.caption not in STYLES:
+    if req.caption not in STYLES and req.caption != "none":
         raise HTTPException(422, "unknown caption style")
     with lock:
         if req.job_id in jobs:  # idempotent replay

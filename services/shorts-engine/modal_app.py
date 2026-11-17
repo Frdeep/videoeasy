@@ -185,7 +185,7 @@ def web():
 
     @api.post("/v1/shorts", dependencies=[Depends(auth)], status_code=202)
     def create(req: ShortsRequest = Body(...)) -> dict:
-        if req.caption not in STYLES:
+        if req.caption not in STYLES and req.caption != "none":
             raise HTTPException(422, "unknown caption style")
         job = {**req.model_dump(), "status": "queued", "created_at": time.time(), "updated_at": time.time()}
         if not jobs.put(req.job_id, job, skip_if_exists=True):  # idempotent replay

@@ -169,10 +169,12 @@ def render(src: Path, meta: dict, moment: Moment, segments: list[Segment], ratio
         for s in segments for w in s.words
         if w.start >= moment.start - 0.05 and w.end <= moment.end + 0.05
     ]
-    ass = workdir / f"clip{index}.ass"
-    ass.write_text(build_ass(words, caption, out_w, out_h), encoding="utf-8")
     out = workdir / f"clip{index}.mp4"
-    vf = f"{_crop_filter(meta['width'], meta['height'], ratio)},subtitles={ass.name}:fontsdir=/app/fonts"
+    vf = _crop_filter(meta["width"], meta["height"], ratio)
+    if caption != "none":
+        ass = workdir / f"clip{index}.ass"
+        ass.write_text(build_ass(words, caption, out_w, out_h), encoding="utf-8")
+        vf += f",subtitles={ass.name}:fontsdir=/app/fonts"
     subprocess.run(
         ["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{moment.start:.3f}", "-to", f"{moment.end:.3f}",
          "-i", str(src), "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",

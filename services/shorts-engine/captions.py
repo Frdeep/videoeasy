@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 YELLOW = "&H0000E5FF&"  # ASS colours are &HBBGGRR
 STYLES = {"karaoke", "bold", "box", "pop", "minimal"}
+NO_CAPTIONS = "none"  # accepted by the API: reframed clips with no burned-in text
 
 
 @dataclass

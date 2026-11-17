@@ -47,7 +47,7 @@ export const launchInput = z
       z.literal(90),
     ]),
     ratio: z.enum(["9:16", "1:1", "16:9"]),
-    caption: z.enum(["karaoke", "bold", "box", "pop", "minimal"]),
+    caption: z.enum(["karaoke", "bold", "box", "pop", "minimal", "none"]),
   })
   .strict();
 

@@ -582,4 +582,5 @@ export const EN: Record<string, string> = {
     "The YouTube video could not be fetched (private, too long or unavailable).",
   "Lien YouTube invalide.": "Invalid YouTube link.",
   "3 jours": "3 days",
+  "Sans sous-titres": "No captions",
 };

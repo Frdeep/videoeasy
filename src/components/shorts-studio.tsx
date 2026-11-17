@@ -16,6 +16,7 @@ const captionStyles = [
   { id: "box", name: "Box" },
   { id: "pop", name: "Pop" },
   { id: "minimal", name: "Minimal" },
+  { id: "none", name: "Sans sous-titres" },
 ] as const;
 const montages = [
   { id: "dynamic", name: "Dynamique", desc: "Zooms, coupes rapides" },
@@ -59,6 +60,19 @@ type Run = {
 type Quota = { freeUsed: number; freeLimit: number; subscribed: boolean };
 
 function CaptionPreview({ style }: { style: string }) {
+  if (style === "none")
+    return (
+      <div className="cap cap-none" aria-hidden>
+        <svg width="26" height="26" viewBox="0 0 24 24">
+          <rect x="3" y="6" width="18" height="12" rx="3" />
+          <path d="M4 4l16 16" />
+        </svg>
+      </div>
+    );
+  return <CaptionWords style={style} />;
+}
+
+function CaptionWords({ style }: { style: string }) {
   const { t } = useT();
   const sample = t(SAMPLE).split(" ");
   const [i, setI] = useState(0);
