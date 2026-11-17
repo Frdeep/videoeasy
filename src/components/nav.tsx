@@ -17,6 +17,7 @@ const icons: Record<string, string> = {
   "/gallery": "M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z",
   "/pricing": "M3 8h18v10H3zM3 11h18M7 15h3",
   "/calendar": "M3 6h18v15H3zM3 10h18M8 3v5M16 3v5",
+  "/shorts": "M7 3h10v18H7zM10 9l5 3-5 3z",
   "/account":
     "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6",
 };
@@ -146,19 +147,45 @@ export function Nav() {
   );
 }
 
-/** Mobile app-style navigation. Rendered outside the blurred sticky header,
- * otherwise `position: fixed` would be relative to the header. */
+/** Mobile app-style navigation: compact floating pill. Both bars slide away
+ * while scrolling down and come back on the slightest scroll up. Rendered
+ * outside the sticky header, otherwise `position: fixed` would be relative
+ * to the header. */
 export function BottomNav() {
   const path = usePathname();
   const active = (href: string) =>
     href === "/" ? path === "/" : path.startsWith(href);
+
+  useEffect(() => {
+    let last = window.scrollY;
+    let frame = 0;
+    const root = document.documentElement;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const y = window.scrollY;
+        if (Math.abs(y - last) < 6) return;
+        root.dataset.scroll = y > last && y > 80 ? "down" : "up";
+        last = y;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      delete root.dataset.scroll;
+    };
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.scroll = "up";
+  }, [path]);
+
   return (
     <nav className="bottom-nav" aria-label="Navigation">
       {[
         ["/", "Accueil"],
-        ["/gallery", "Créations"],
+        ["/shorts", "Shorts"],
         ["/studio", "Créer"],
-        ["/calendar", "Agenda"],
+        ["/gallery", "Créations"],
         ["/account", "Compte"],
       ].map(([href, label]) => (
         <Link
@@ -166,11 +193,12 @@ export function BottomNav() {
           href={href}
           className={`${active(href) ? "active" : ""}${href === "/studio" ? " fab" : ""}`}
           aria-current={active(href) ? "page" : undefined}
+          aria-label={label}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
             <path d={href === "/studio" ? "M12 5v14M5 12h14" : icons[href]} />
           </svg>
-          <span>{label}</span>
+          {href !== "/studio" && <span>{label}</span>}
         </Link>
       ))}
     </nav>

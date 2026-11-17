@@ -169,3 +169,91 @@ export async function signedUrl(key: string, download = true) {
   if (download) url.searchParams.set("download", "");
   return url.toString();
 }
+
+/** Signed URL letting the browser PUT one file straight into the private
+ * bucket (Vercel bodies are capped at 4.5 MB). Valid 2 h, single key. */
+export async function signedUploadUrl(key: string) {
+  const response = await fetch(
+    `${storageBase()}/object/upload/sign/${BUCKET}/${key}`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: "{}",
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) throw new MediaError(`upsign_${response.status}`);
+  const { url } = (await response.json()) as { url?: string };
+  if (!url) throw new MediaError("upsign_empty");
+  return `${storageBase()}${url}`;
+}
+
+/** Size and MIME type of a stored object, or null when it does not exist. */
+export async function objectInfo(key: string) {
+  const response = await fetch(
+    `${storageBase()}/object/info/${BUCKET}/${key}`,
+    {
+      headers: authHeaders(),
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    },
+  );
+  if (response.status === 404 || response.status === 400) return null;
+  if (!response.ok) throw new MediaError(`info_${response.status}`);
+  const info = (await response.json()) as {
+    size?: number;
+    content_type?: string;
+    metadata?: { size?: number; mimetype?: string };
+  };
+  return {
+    size: Number(info.size ?? info.metadata?.size ?? 0),
+    contentType: info.content_type ?? info.metadata?.mimetype ?? "",
+  };
+}
+
+/** Long-lived (2 h) read URL handed to the shorts engine only. */
+export async function engineReadUrl(key: string) {
+  const response = await fetch(
+    `${storageBase()}/object/sign/${BUCKET}/${key}`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresIn: 7200 }),
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) throw new MediaError(`sign_${response.status}`);
+  const { signedURL } = (await response.json()) as { signedURL?: string };
+  if (!signedURL) throw new MediaError("sign_empty");
+  return `${storageBase()}${signedURL}`;
+}
+
+export async function storeBytes(
+  key: string,
+  bytes: Uint8Array<ArrayBuffer>,
+  contentType: string,
+) {
+  const response = await fetch(`${storageBase()}/object/${BUCKET}/${key}`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(),
+      "Content-Type": contentType,
+      "x-upsert": "true",
+      "cache-control": "private, max-age=0",
+    },
+    body: bytes,
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!response.ok) throw new MediaError(`upload_${response.status}`);
+}
+
+export async function deleteObject(key: string) {
+  await fetch(`${storageBase()}/object/${BUCKET}`, {
+    method: "DELETE",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ prefixes: [key] }),
+    signal: AbortSignal.timeout(10000),
+  }).catch(() => {});
+}

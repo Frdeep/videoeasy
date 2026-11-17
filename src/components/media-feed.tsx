@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { genres, showcase, type ShowcaseItem } from "@/lib/showcase";
 import { Reveal, RiseText, Segmented } from "./motion";
+import { useIsMobile, useSnapIndex } from "./use-mobile";
 
 const filters = ["Tout", ...genres] as const;
 type Filter = (typeof filters)[number];
@@ -37,6 +38,76 @@ function Media({ item, playing }: { item: ShowcaseItem; playing: boolean }) {
         </svg>
       </span>
     </div>
+  );
+}
+
+/** Mobile: edge-to-edge native swipe rail, no frame; only the centred card plays. */
+function Rail({ items }: { items: ShowcaseItem[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const current = useSnapIndex(ref, "x", [items.length]);
+  useEffect(() => {
+    ref.current?.scrollTo({ left: 0 });
+  }, [items]);
+  return (
+    <section className="rail-wrap" aria-label="Exemples de vidéos">
+      <div className="rail" ref={ref}>
+        {items.map((it, i) => (
+          <article key={it.id} className={`rail-card${i === current ? " on" : ""}`}>
+            <Media item={it} playing={i === current} />
+            <span className="badge badge-left">{it.genre}</span>
+            <span className="badge badge-right">{it.format}</span>
+            <span className="card-caption">
+              <strong>{it.title}</strong>
+            </span>
+          </article>
+        ))}
+      </div>
+      <div className="rail-dots" aria-hidden>
+        {items.map((it, i) => (
+          <span key={it.id} className={i === current ? "on" : ""} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Bento({ genre }: { genre?: string }) {
+  return (
+    <section className="bento" aria-label="Raccourcis">
+      <Link className="tile tile-create" href={genre ? `/studio?genre=${encodeURIComponent(genre)}` : "/studio"}>
+        <span className="tile-kicker">Studio</span>
+        <strong>Créer une vidéo</strong>
+        <span className="tile-sub">Une phrase suffit. HD, avec le son.</span>
+        <i className="tile-go" aria-hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </i>
+      </Link>
+      <Link className="tile tile-shorts" href="/shorts">
+        <span className="tile-kicker">Shorts</span>
+        <strong>1 vidéo → 10 shorts</strong>
+        <span className="tile-sub">Sous-titrés, recadrés.</span>
+      </Link>
+      <Link className="tile tile-gallery" href="/gallery">
+        <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden><path d="M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z" /></svg>
+        <strong>Créations</strong>
+      </Link>
+      <Link className="tile tile-cal" href="/calendar">
+        <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden><path d="M3 6h18v15H3zM3 10h18M8 3v5M16 3v5" /></svg>
+        <strong>Calendrier</strong>
+      </Link>
+      <Link className="tile tile-price" href="/pricing">
+        <span className="tile-kicker">Dès 23 € / mois</span>
+        <strong>1 000 crédits</strong>
+      </Link>
+      <div className="tile tile-genres">
+        <span className="tile-kicker">Formats qui performent</span>
+        <div className="chips">
+          {genres.map((g) => (
+            <Link key={g} href={`/studio?genre=${encodeURIComponent(g)}`}>{g}</Link>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -85,6 +156,33 @@ export function MediaFeed({ query = "" }: { query?: string }) {
   }, [paused, move, count]);
 
   const item = shown[current];
+  const mobile = useIsMobile();
+
+  if (mobile)
+    return (
+      <div className="home home-m">
+        <section className="hero">
+          <RiseText text={query ? `« ${query} »` : "Une idée. Une vidéo."} />
+          <p className="hero-sub">Des vidéos IA prêtes à publier.</p>
+        </section>
+        <nav className="chip-row" aria-label="Genres">
+          {filters.map((f) => (
+            <button key={f} className={f === filter ? "on" : ""} aria-pressed={f === filter} onClick={() => setFilter(f)}>
+              {f}
+            </button>
+          ))}
+        </nav>
+        {count ? (
+          <Rail items={shown} />
+        ) : (
+          <div className="empty-state">
+            <h2>Rien ici.</h2>
+            <Link className="text-link" href="/">Tout voir</Link>
+          </div>
+        )}
+        <Bento genre={filter === "Tout" ? undefined : filter} />
+      </div>
+    );
 
   return (
     <div className="home">
