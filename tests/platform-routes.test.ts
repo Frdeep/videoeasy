@@ -6,7 +6,14 @@ const mock = vi.hoisted(() => ({
 }));
 vi.mock("../src/lib/auth", () => ({ requireUser: mock.user }));
 vi.mock("../src/lib/db", () => ({ db: () => ({ query: mock.query }) }));
-vi.mock("../src/lib/media-store", () => ({ signedUrl: mock.url }));
+vi.mock("../src/lib/media-store", () => ({
+  signedUrl: mock.url,
+  fileResponse: async (r: Request, key: string, name: string) => {
+    const q = new URL(r.url).searchParams;
+    if (q.get("format") === "url") return Response.json({ url: await mock.url(key, false), name });
+    return Response.redirect(await mock.url(key, q.get("view") !== "1"), 303);
+  },
+}));
 import { GET } from "../src/app/api/platform/jobs/[id]/download/route";
 const id = "44444444-4444-4444-8444-444444444444";
 beforeEach(() => {
