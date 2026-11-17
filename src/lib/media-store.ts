@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "./config";
+import { HF_PREFIX, hfConfigured, hfDelete, hfPut, hfSignedUrl } from "./hf-storage";
 
 // Private Supabase Storage bucket `media` (public=false, 200 MB, video/image
 // MIME allow-list). Server-only secret key; object keys are generated here.
@@ -134,6 +135,12 @@ export async function importResult(
   const contentType = sniff(bytes);
   if (!contentType || !ALLOWED[contentType]) throw new MediaError("bad_type");
   const key = `${userId}/${jobId}.${ALLOWED[contentType]}`;
+  if (hfConfigured())
+    return {
+      key: await hfPut(key, bytes, contentType),
+      contentType,
+      size: bytes.byteLength,
+    };
   const response = await fetch(`${storageBase()}/object/${BUCKET}/${key}`, {
     method: "POST",
     headers: {
@@ -152,6 +159,7 @@ export async function importResult(
 /** Short-lived signed URL for an ownership-checked object key: 60 s to download,
  * 15 min for in-page playback (video seeking re-requests the same URL). */
 export async function signedUrl(key: string, download = true) {
+  if (key.startsWith(HF_PREFIX)) return hfSignedUrl(key, download);
   const response = await fetch(
     `${storageBase()}/object/sign/${BUCKET}/${key}`,
     {
@@ -230,11 +238,13 @@ export async function engineReadUrl(key: string) {
   return `${storageBase()}${signedURL}`;
 }
 
+/** Stores bytes (Hugging Face when configured) and returns the key to save. */
 export async function storeBytes(
   key: string,
   bytes: Uint8Array<ArrayBuffer>,
   contentType: string,
 ) {
+  if (hfConfigured()) return hfPut(key, bytes, contentType);
   const response = await fetch(`${storageBase()}/object/${BUCKET}/${key}`, {
     method: "POST",
     headers: {
@@ -247,9 +257,11 @@ export async function storeBytes(
     signal: AbortSignal.timeout(60000),
   });
   if (!response.ok) throw new MediaError(`upload_${response.status}`);
+  return key;
 }
 
 export async function deleteObject(key: string) {
+  if (key.startsWith(HF_PREFIX)) return hfDelete(key);
   await fetch(`${storageBase()}/object/${BUCKET}`, {
     method: "DELETE",
     headers: { ...authHeaders(), "Content-Type": "application/json" },

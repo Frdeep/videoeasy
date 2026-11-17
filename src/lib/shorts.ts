@@ -282,8 +282,7 @@ async function importClips(row: Row) {
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (bytes.byteLength > MAX_BYTES) return fail(row, "clip_too_large");
     const key = `${row.user_id}/shorts/${row.id}/clip${clip.index}.mp4`;
-    await storeBytes(key, bytes, "video/mp4");
-    clip.key = key;
+    clip.key = await storeBytes(key, bytes, "video/mp4");
     // Persist progress so a retry resumes instead of re-importing.
     await db().query(
       "update platform.shorts_jobs set clips=$2 where id=$1 and status='importing'",
